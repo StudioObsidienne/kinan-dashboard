@@ -47,7 +47,9 @@ const INTERDITS = [
 // - courrier.js : option courrier (IMAP/SMTP vers les serveurs choisis par l'utilisateur, récaps par « claude -p ») ; DÉSACTIVÉE par défaut,
 //   chargée seulement par courrier-ipc.js, et seulement si courrier-option.json contient « actif: true » (bouton « Activer » + confirmation).
 // - test/ : tests avec faux serveurs injectés, jamais chargés par l'appli.
+// - test/demarrage.test.js : lance l'appli elle-même (Electron du dossier node_modules) pour le test de démarrage, jamais chargé par l'appli.
 const EXCEPTIONS = {
+  'test/demarrage.test.js': ['processus externe'],
   'mise-a-jour.js': ['module réseau', 'processus externe'],
   'outils/statusline-limites.js': ['processus externe'],
   'courrier.js': ['processus externe', 'bibliothèque de messagerie']

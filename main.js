@@ -94,6 +94,7 @@ function creerFenetre() {
     try { fenetre.setAppDetails({ appId: 'kinan-os.dashboard', appIconPath: path.join(__dirname, 'assets', 'icon.ico'), appIconIndex: 0, relaunchCommand: `"${process.execPath}" "${__dirname}"`, relaunchDisplayName: 'Kinan Orchestre' }); } catch { /* sans effet */ }
   }
   fenetre.on('closed', () => { if (fenetrePrincipale === fenetre) fenetrePrincipale = null; });
+  if (TEST_DEMARRAGE) surveillerDemarrage(fenetre);
   fenetre.loadFile(path.join(__dirname, 'src', 'index.html'));
 
   // Envoi de l'état une fois par seconde, seulement s'il a changé.
@@ -109,6 +110,29 @@ function creerFenetre() {
   // Fermer la fenêtre principale quitte vraiment l'appli (les fenêtres cachées du son et du détail ne la gardent plus en vie :
   // sinon un processus invisible gardait le verrou et empêchait de relancer Kinan Orchestre).
   fenetre.on('closed', () => { clearInterval(minuteur); app.quit(); });
+}
+
+// Test de démarrage (test/demarrage.test.js) : KINAN_TEST_DEMARRAGE=1 ouvre la fenêtre, attend le chargement de la page,
+// écrit « DEMARRAGE OK » (ou les erreurs relevées) sur la sortie standard puis quitte. Profil Electron isolé dans le dossier
+// d'état (KINAN_OS_DOSSIER, temporaire pendant le test) : ni l'appli ouverte de l'utilisateur ni ses réglages ne sont touchés.
+const TEST_DEMARRAGE = process.env.KINAN_TEST_DEMARRAGE === '1';
+const erreursDemarrage = [];
+if (TEST_DEMARRAGE) {
+  app.setPath('userData', path.join(DOSSIER_ETAT, 'profil-electron-test'));
+  process.on('uncaughtException', (e) => erreursDemarrage.push('processus principal : ' + String((e && e.stack) || e).slice(0, 400)));
+  setTimeout(() => { process.stdout.write(['DEMARRAGE ERREUR', 'délai dépassé (45 s)', ...erreursDemarrage, ''].join('\n')); app.exit(2); }, 45000).unref();
+}
+function surveillerDemarrage(fenetre) {
+  const wc = fenetre.webContents;
+  wc.on('console-message', (ev) => { if (ev && ev.level === 'error') erreursDemarrage.push('page : ' + String(ev.message).slice(0, 400)); });
+  wc.on('preload-error', (_e, f, err) => erreursDemarrage.push('preload ' + path.basename(String(f)) + ' : ' + String(err && err.message).slice(0, 300)));
+  wc.on('did-fail-load', (_e, code, desc) => erreursDemarrage.push(`chargement : ${code} ${desc}`));
+  wc.on('render-process-gone', (_e, d) => erreursDemarrage.push('rendu arrêté : ' + (d && d.reason)));
+  wc.once('did-finish-load', () => setTimeout(() => { // laisse aux scripts de la page le temps de s'exécuter
+    const ok = !erreursDemarrage.length;
+    process.stdout.write([ok ? 'DEMARRAGE OK' : 'DEMARRAGE ERREUR', ...erreursDemarrage, ''].join('\n'));
+    app.exit(ok ? 0 : 1);
+  }, 2500));
 }
 
 // Une seule fenêtre : un second lancement (par le hook de démarrage) se ferme sans rien faire.
@@ -254,7 +278,8 @@ app.whenReady().then(() => {
   // Autres conversations (projets) en cours : ~/.kinan-os/sessions.json, mis à jour par les hooks. Toutes les 2 s, envoyé si changé.
   const lireSessions = () => {
     let d = {}; try { d = JSON.parse(fs.readFileSync(path.join(DOSSIER_ETAT, 'sessions.json'), 'utf8')); } catch { return {}; }
-    for (const id of Object.keys(d)) { const s = d[id]; s.titre = (s.transcript && relais.titreConversation(s.transcript)) || ('Conversation ' + id.slice(0, 8)); }
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return {}; // fichier corrompu (null, tableau…) : rien à afficher, pas d'exception
+    for (const id of Object.keys(d)) { const s = d[id]; if (!s || typeof s !== 'object') { delete d[id]; continue; } s.titre = (s.transcript && relais.titreConversation(s.transcript)) || ('Conversation ' + id.slice(0, 8)); }
     return d;
   };
   let dernieresSessions = '';
