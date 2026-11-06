@@ -12,7 +12,7 @@ The plugin writes the state files; this dashboard only displays them. Without th
 
 - Tested on Windows only. macOS and Linux are untested.
 - The interface text is in French.
-- Version 0.2.0. Electron 45. Already used by testers on their own computers (first feedback integrated: animation smoothness, taskbar icon, update flow). A next version is in progress.
+- Version 0.2.1. Electron 45. Already used by testers on their own computers (first feedback integrated: animation smoothness, taskbar icon, update flow). A next version is in progress.
 - The dashboard displays what the plugin writes. For the judge to work as designed, use **Sonnet 5.5** with **medium** effort in the main Claude chat.
 
 ## Installation
