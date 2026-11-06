@@ -19,6 +19,8 @@ const DESACTIVE = { ok: false, erreur: "Le courrier est désactivé : active-le 
 
 function enregistrer() {
   const diffuser = () => { for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('courrier:maj'); };
+  // Activer / désactiver change l'équipe affichée : la configuration est relue et la scène (index.html) rechargée.
+  const rechargerScene = () => { config.charger(true); for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed() && /index\.html/.test(w.webContents.getURL())) w.webContents.reloadIgnoringCache(); };
   const texte = (x, n) => (typeof x === 'string' ? x.slice(0, n) : '');
   const serveur = (o) => (o && typeof o === 'object' ? { hote: texte(o.hote, 260), port: texte(String(o.port == null ? '' : o.port), 6), securite: texte(o.securite, 10) } : null);
   const avec = (f) => (...a) => { const m = charger(); return m ? f(m, ...a) : DESACTIVE; };
@@ -31,9 +33,9 @@ function enregistrer() {
       detail: "Le tableau de bord pourra se connecter aux serveurs IMAP et SMTP de la boîte que tu choisis, mais seulement quand tu cliques sur Tester, Relever ou Envoyer, puis toutes les 30 minutes une fois la connexion vérifiée. Les récaps lancent Claude Code (tes jetons). Aucun mail ne part sans ta confirmation." });
     if (r.response !== 0) return { ok: false, annule: true };
     try { ecrireOption(true); } catch (err) { return { ok: false, erreur: 'Écriture impossible : ' + String(err.message).slice(0, 120) }; }
-    diffuser(); return { ok: true };
+    diffuser(); rechargerScene(); return { ok: true };
   });
-  ipcMain.handle('courrier:desactiver', () => { try { ecrireOption(false); } catch { return { ok: false, erreur: 'Écriture impossible.' }; } diffuser(); return { ok: true }; });
+  ipcMain.handle('courrier:desactiver', () => { try { ecrireOption(false); } catch { return { ok: false, erreur: 'Écriture impossible.' }; } diffuser(); rechargerScene(); return { ok: true }; });
   ipcMain.handle('courrier:statut', avec((m) => ({ ...m.statut(), actif: true })));
   ipcMain.handle('courrier:enregistrer', avec((m, _e, d) => {
     d = d || {};

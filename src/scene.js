@@ -114,7 +114,14 @@
   if (CFG && CFG.juge && CFG.juge.couleur) { AGENTS.kinan.ui = CFG.juge.couleur; AGENTS.kinan.couleurPerso = CFG.juge.couleur; }
   window.KinanEquipe = { SIEGE_DE, ID_DE }; // lu par boutons.js (bulles) : identifiant configuré <-> siège
   const CLES = Object.keys(AGENTS);
-  const ORDRE = ['drafion', 'kinan', 'skyze', 'johms', 'quatre', 'cinq'].filter((k) => AGENTS[k]); // arrière puis avant
+  let ORDRE = ['drafion', 'kinan', 'skyze', 'johms', 'quatre', 'cinq'].filter((k) => AGENTS[k]); // arrière puis avant
+  // Trois agents ou moins (courrier désactivé) : tous devant le juge, sur une seule rangée centrée.
+  const OCCUPES = SIEGES.filter((k) => AGENTS[k]);
+  if (OCCUPES.length <= 3) {
+    const colonnes = OCCUPES.length === 1 ? [1] : OCCUPES.length === 2 ? [0, 2] : [0, 1, 2];
+    OCCUPES.forEach((k, i) => { AGENTS[k].col = colonnes[i]; AGENTS[k].rang = 1; });
+    ORDRE = ['kinan', ...OCCUPES];
+  }
   const COLS = [70, 200, 330], HAUTS = [138, 204];
   CLES.forEach((k, i) => {
     const a = AGENTS[k];

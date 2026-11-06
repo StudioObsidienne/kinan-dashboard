@@ -12,7 +12,9 @@ const MAX_AGENTS = 8;
 const DEFAUT_AGENTS = {
   drafion: { nom: 'Drafion', base: 'lecture', modele: 'haiku', role: 'Lectures, recherches, vérifications' },
   skyze: { nom: 'Skyze', base: 'production', modele: 'sonnet', role: 'Production courante' },
-  johms: { nom: 'Johms', base: 'expert', modele: 'opus', role: 'Difficultés réelles' }
+  johms: { nom: 'Johms', base: 'expert', modele: 'opus', role: 'Difficultés réelles' },
+  courrier: { nom: 'Courrier', base: 'kinan-orchestre:courrier', modele: 'haiku', role: 'Mails : résumés et brouillons', option: 'courrier' },
+  devis: { nom: 'Devis', base: 'kinan-orchestre:devis', modele: 'sonnet', role: 'Devis : brouillons à valider', option: 'courrier' }
 };
 const MODELES = ['haiku', 'sonnet', 'opus', 'inherit'];
 const PAR_BASE = { lecture: 'haiku', production: 'sonnet', expert: 'opus' };
@@ -49,6 +51,7 @@ function titreParDefaut() {
   return langue.startsWith('fr') ? 'Bureau des agents' : 'Agents desk';
 }
 
+const courrierActif = () => { try { return JSON.parse(fs.readFileSync(path.join(DOSSIER, 'courrier-option.json'), 'utf8')).actif === true; } catch { return false; } };
 function lire() {
   const alertes = [];
   let u = {};
@@ -66,6 +69,7 @@ function lire() {
     if (id === 'kinan') { alertes.push('« kinan » est réservé au juge'); continue; }
     if (!/^[a-z][a-z0-9-]{0,23}$/.test(id)) { alertes.push(`identifiant d'agent invalide : ${propre(id, 30)}`); continue; }
     if (!a || typeof a !== 'object' || a.actif === false) continue;
+    if ((a.option || (DEFAUT_AGENTS[id] || {}).option) === 'courrier' && !courrierActif()) continue; // option courrier désactivée : agent masqué
     const def = DEFAUT_AGENTS[id] || {};
     const base = typeof a.base === 'string' ? a.base : def.base || 'production';
     const modele = MODELES.includes(a.modele) ? a.modele : def.modele || PAR_BASE[base] || 'inherit';
