@@ -29,7 +29,7 @@ function comparer(a, b) {
   return pa === pb ? 0 : pa ? -1 : 1;
 }
 
-// Pop-up « Nouvelle mise à jour » dans l'appli : une seule fois par version publiée (appli et plugin séparément).
+// Pop-up « Nouvelle mise à jour » dans l'appli : une fois par version et par lancement (appli et plugin séparément).
 // deja = versions déjà annoncées, mémorisées dans le cache (clé « annonce »). Fonctions pures (testées dans test/mise-a-jour.test.js).
 function aAnnoncer(etat, deja) {
   const d = deja && typeof deja === 'object' ? deja : {};
@@ -129,6 +129,7 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
     git: { possible: false, raison: active ? 'vérification en cours' : 'vérification désactivée' }
   };
   let cache = lireJson(FICHIER) || {};
+  delete cache.annonce; // le pop-up revient à chaque lancement tant que la mise à jour n'est pas faite (mémorisé seulement pour la session en cours)
   const diffuser = () => { for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('maj:maj', etat); };
   const appliquerCache = () => {
     etat.verifie = Number.isFinite(cache.verifie) ? cache.verifie : null;
