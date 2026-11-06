@@ -26,7 +26,12 @@ contextBridge.exposeInMainWorld('kinanUI', {
   relaisCopier: () => ipcRenderer.invoke('relais:copier'),
   sessionsLire: () => ipcRenderer.invoke('sessions:lire'),
   economiesLire: () => ipcRenderer.invoke('economies:lire'),
-  surSessions: (r) => ipcRenderer.on('sessions:maj', (_e, e) => r(e))
+  surSessions: (r) => ipcRenderer.on('sessions:maj', (_e, e) => r(e)),
+  majLire: () => ipcRenderer.invoke('maj:lire'),
+  surMaj: (r) => ipcRenderer.on('maj:maj', (_e, e) => r(e)),
+  majAppliquer: () => ipcRenderer.invoke('maj:appliquer'),
+  limitesLire: () => ipcRenderer.invoke('limites:lire'),
+  surLimites: (r) => ipcRenderer.on('limites:maj', (_e, e) => r(e))
 });
 
 // Fenêtre Gestion : accès limité aux fichiers de Kinan Orchestre.

@@ -716,6 +716,88 @@
     }
   }
 
+  // ================= ENSEIGNE « TOKEN OUT » =================
+  // Limite d'utilisation atteinte : une enseigne pixel tombe du plafond et reste accrochée par deux chaînes au-dessus des agents.
+  // Visibilité pilotée par boutons.js (événement « kinan-tokenout ») ; le texte détaillé et « × » sont en HTML (#tokenout) posés dessus.
+  // Mouvement réduit : pas de chute, pas de clignotement.
+  const POLICE = {
+    T: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
+    O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+    K: ['#...#', '#..#.', '#.#..', '##...', '#.#..', '#..#.', '#...#'],
+    E: ['#####', '#....', '#....', '####.', '#....', '#....', '#####'],
+    N: ['#...#', '##..#', '##..#', '#.#.#', '#..##', '#..##', '#...#'],
+    U: ['#...#', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.']
+  };
+  // Repère scène (y compté sous le mur ajouté DY) ; le HTML #tokenout reprend exactement ce rectangle (index.html).
+  const ENS = { x: 118, y: 62, w: 164, h: 36, ech: 2 }; // ech : 1 pixel de police = 2 unités (≈ la taille de l'ancienne enseigne)
+  const enseigne = { visible: false, depuis: -1e9 };
+  document.addEventListener('kinan-tokenout', (e) => {
+    const v = !!(e.detail && e.detail.visible);
+    if (v && !enseigne.visible) enseigne.depuis = performance.now();
+    enseigne.visible = v; sale = true;
+  });
+  const rebond = (p) => { // easeOutBounce
+    const n = 7.5625, d = 2.75;
+    if (p < 1 / d) return n * p * p;
+    if (p < 2 / d) return n * (p -= 1.5 / d) * p + 0.75;
+    if (p < 2.5 / d) return n * (p -= 2.25 / d) * p + 0.9375;
+    return n * (p -= 2.625 / d) * p + 0.984375;
+  };
+  function lettres(texte, x, y, ech, coul, halo) {
+    let cx = x;
+    for (const ch of texte) {
+      const m = POLICE[ch];
+      if (m) for (let j = 0; j < 7; j++) for (let i = 0; i < 5; i++) if (m[j][i] === '#') {
+        if (halo) r(cx + i * ech - 1, y + j * ech - 1, ech + 2, ech + 2, coul); else r(cx + i * ech, y + j * ech, ech, ech, coul);
+      }
+      cx += ch === ' ' ? 3 * ech : 6 * ech;
+    }
+  }
+  const largeurTexte = (texte, ech) => [...texte].reduce((s, ch) => s + (ch === ' ' ? 3 : 6) * ech, 0) - ech;
+  function chaine(cx, y0, y1) {
+    r(cx - 3, y0, 7, 2, '#2a2438'); r(cx - 2, y0, 5, 1, '#4a4360'); // platine au plafond
+    for (let y = y0 + 2; y < y1 - 1; y += 6) {
+      if (y + 7 < y1) r(cx, y + 3, 1, Math.min(5, y1 - y - 4), '#6b7088'); // maillon de profil
+      r(cx - 1, y, 3, 1, '#9aa0b4'); r(cx - 1, y + 3, 3, 1, '#7d8298'); r(cx - 1, y + 1, 1, 2, '#c9cddc'); r(cx + 1, y + 1, 1, 2, '#7d8298'); // maillon de face
+    }
+    r(cx - 2, y1 - 2, 5, 1, '#9aa0b4'); px(cx - 2, y1 - 1, '#9aa0b4'); px(cx + 2, y1 - 1, '#9aa0b4'); // piton sur l'enseigne
+  }
+  function enseigneDessin(t) {
+    if (!enseigne.visible) return;
+    const dt = t - enseigne.depuis, CHUTE = 700;
+    const p = calme ? 1 : borne(dt / CHUTE);
+    if (!calme && p < 1) sale = true;
+    const off = Math.round(-(ENS.y + DY + ENS.h + 6) * (1 - rebond(p)));
+    const { x, w, h } = ENS, y = ENS.y + off;
+    if (y + h < -DY) return;
+    chaine(x + 18, -DY, y); chaine(x + w - 19, -DY, y);
+    // Halo rouge sur le mur, puis l'ombre portée
+    if (p >= 1) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.16; ovale(x + w / 2, y + h + 2, w / 2 + 6, 7, '#ff3b4a'); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+    r(x + 2, y + h + 1, w - 2, 2, '#00000055');
+    // Caisson
+    r(x - 1, y - 1, w + 2, h + 2, K);
+    r(x, y, w, h, '#3a0c14');
+    r(x + 1, y + 1, w - 2, h - 2, '#1c060b');
+    r(x + 1, y + 1, w - 2, 1, '#ff3b4a'); r(x + 1, y + h - 2, w - 2, 1, '#ff3b4a'); r(x + 1, y + 1, 1, h - 2, '#ff3b4a'); r(x + w - 2, y + 1, 1, h - 2, '#ff3b4a');
+    r(x + 2, y + 2, w - 4, 1, '#5a1520');
+    // Ampoules (haut et bas), clignotement alterné
+    const phase = calme ? 0 : Math.floor(t / 600) % 2;
+    for (let i = 0, bx = x + 5; bx < x + w - 6; i++, bx += 6) {
+      for (const by of [y + 3, y + h - 5]) {
+        const on = calme || (i + phase) % 2 === 0;
+        r(bx, by, 2, 2, on ? '#ffc94d' : '#6b4a1a'); if (on) px(bx, by, '#fff3c2');
+      }
+    }
+    // Texte néon : halo puis cœur ; petit vacillement du néon (comme l'ancienne enseigne)
+    const c = ((t % 3400) + 3400) % 3400 / 3400;
+    const vac = calme ? 1 : c > 0.92 && c < 0.94 ? 0.55 : c > 0.96 && c < 0.98 ? 0.7 : 1;
+    const lt = largeurTexte('TOKEN OUT', ENS.ech), tx = Math.round(x + (w - lt) / 2), ty = y + 6;
+    const xOut = tx + largeurTexte('TOKEN ', ENS.ech) + ENS.ech;
+    g.globalAlpha = 0.5 * vac; lettres('TOKEN', tx, ty, ENS.ech, '#ff1f3a', true); lettres('OUT', xOut, ty, ENS.ech, '#ff9a00', true);
+    g.globalAlpha = vac; lettres('TOKEN', tx, ty, ENS.ech, '#ffe3e6'); lettres('OUT', xOut, ty, ENS.ech, '#ffd166');
+    g.globalAlpha = 1;
+  }
+
   function dessiner(t) {
     g = principal;
     g.setTransform(1, 0, 0, 1, 0, DY);
@@ -732,6 +814,7 @@
     guirlande(t, lueursG);
     if (mom.voile > 0) { g.globalCompositeOperation = 'lighter'; for (const [x, y, rr, c, al] of lueursG) { g.globalAlpha = al * mom.voile * 1.6; ovale(x + 0.5, y + 0.5, rr, rr, c); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
     for (const b of bulles) bulle(b, t);
+    enseigneDessin(t);
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
 

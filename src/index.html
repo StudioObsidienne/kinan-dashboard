@@ -123,28 +123,47 @@
   .journal::-webkit-scrollbar-thumb { background: #2f2945; border-radius: 4px; }
   .pied { margin: 0; color: var(--pale); font-size: 11px; }
 
-  /* TOKEN OUT : enseigne lumineuse quand la limite d'utilisation Claude est atteinte */
-  .tokenout { position: absolute; left: 0; right: 0; top: 0; z-index: 20; padding: 16px 16px 12px; text-align: center; overflow: hidden;
-    background: linear-gradient(#2a0b10f2, #170609f2); border-bottom: 3px solid #ff3b4a; box-shadow: 0 8px 34px #ff3b4a59, inset 0 0 40px #ff3b4a22; }
+  /* TOKEN OUT : l'enseigne est dessinée en pixels dans la scène (scene.js), accrochée par deux chaînes au-dessus des agents.
+     Ici : le texte détaillé et le bouton, posés sur l'enseigne (même repère : 1 unité de scène = --u). */
+  .tokenout { position: absolute; z-index: 3; left: calc(118 / 400 * 100%); top: calc(80 / 270 * 100%); width: calc(164 / 400 * 100%); height: calc(36 / 270 * 100%);
+    pointer-events: none; animation: tk-pose .2s ease-out .78s both; }
   .tokenout[hidden], .pastille-tokenout[hidden] { display: none; }
-  .tk-amp { position: absolute; left: 0; right: 0; height: 10px; pointer-events: none; }
-  .tk-amp.haut { top: 3px; } .tk-amp.bas { bottom: 3px; }
-  .tk-amp::before, .tk-amp::after { content: ""; position: absolute; inset: 0;
-    background: radial-gradient(circle at 50% 50%, #fff3c2 0 2px, #ffc94d 3px, #ffc94d66 4.5px, transparent 5.5px) 0 0 / 28px 10px repeat-x;
-    animation: tk-clig 1.2s steps(1) infinite; }
-  .tk-amp::after { background-position-x: 14px; animation-delay: -.6s; }
-  @keyframes tk-clig { 0% { opacity: 1; } 50% { opacity: .22; } }
-  .tk-titre { margin: 2px 0 0; font: 900 clamp(34px, 7vw, 74px)/1 "Arial Black", "Segoe UI Black", "Segoe UI", sans-serif; letter-spacing: .1em; color: #ffe3e6;
-    text-shadow: 0 0 4px #fff, 0 0 14px #ff3b4a, 0 0 34px #ff1f3a, 0 0 60px #ff1f3a99; animation: tk-neon 3.4s linear infinite; }
-  .tk-titre span { color: #ffd166; text-shadow: 0 0 4px #fff, 0 0 14px #ffb020, 0 0 34px #ff9a00; }
-  @keyframes tk-neon { 0%, 90%, 100% { opacity: 1; } 92% { opacity: .55; } 94% { opacity: 1; } 96% { opacity: .7; } }
-  .tk-sous { margin: 8px 0 0; font-size: clamp(13px, 1.9vw, 18px); font-weight: 600; color: #ffd9dc; }
+  @keyframes tk-pose { from { opacity: 0; } to { opacity: 1; } }
+  .tk-titre { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } /* lu par les lecteurs d'écran */
+  .tk-sous { position: absolute; left: 0; right: 0; top: calc(var(--u, 2px) * 21); height: calc(var(--u, 2px) * 10); margin: 0; padding: 0 calc(var(--u, 2px) * 5);
+    font: 600 max(10px, calc(var(--u, 2px) * 3.4))/calc(var(--u, 2px) * 10) "Segoe UI", sans-serif; text-align: center; color: #ffd9dc;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tk-sous b { color: #ffd166; font-variant-numeric: tabular-nums; }
-  .tk-masquer { position: absolute; right: 12px; top: 14px; z-index: 1; font: inherit; font-size: 12px; color: #ffd9dc; background: #00000066; border: 1px solid #ff6b78aa; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
-  .tk-masquer:hover { background: #ff3b4a55; }
+  .tk-masquer { position: absolute; right: calc(var(--u, 2px) * -1.5); top: calc(var(--u, 2px) * -1.5); pointer-events: auto; display: grid; place-items: center;
+    width: max(18px, calc(var(--u, 2px) * 6)); height: max(18px, calc(var(--u, 2px) * 6)); padding: 0; font: 700 max(12px, calc(var(--u, 2px) * 4))/1 "Segoe UI", sans-serif;
+    color: #ffd9dc; background: #240810; border: 1px solid #ff6b78; border-radius: 50%; cursor: pointer; }
+  .tk-masquer:hover { background: #5a1820; }
+  .tk-masquer:focus-visible { outline: 2px solid #ffd166; outline-offset: 2px; }
   .pastille-tokenout { font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .04em; padding: 3px 10px; border-radius: 99px; cursor: pointer; color: #ffe3e6;
     background: #4a1118; border: 1px solid #ff6b78; box-shadow: 0 0 10px #ff3b4a77; }
-  @media (prefers-reduced-motion: reduce) { .tk-amp::before, .tk-amp::after, .tk-titre { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .tokenout { animation: none; } }
+  /* Version (coche verte si à jour), mise à jour disponible, bulle rouge « limite » */
+  .titre-ligne { display: flex; align-items: center; gap: 8px; }
+  .version { display: inline-flex; align-items: center; gap: 3px; padding: 0; font-size: 11px; color: var(--pale); background: none; border: 0; cursor: pointer; }
+  .version:hover, .version:focus-visible { color: var(--doux); }
+  .version[hidden], .pastille-maj[hidden], .bulle-limite[hidden] { display: none; }
+  .version .v-coche { display: none; width: 11px; height: 11px; fill: none; stroke: #5fd3a0; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .version.a-jour .v-coche { display: inline; }
+  .pastille-maj { font: inherit; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; cursor: pointer; color: #ffd166; background: #2b1d06; border: 1px solid #ffb020aa; }
+  .bulle-limite { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; white-space: nowrap; color: #fff; background: #b4232f; border: 1px solid #ff6b78; box-shadow: 0 0 10px #ff3b4a66; }
+  .maj-carte { position: fixed; inset: 54px auto auto 18px; margin: 0; width: min(400px, calc(100vw - 32px)); padding: 14px 16px; color: var(--texte);
+    background: var(--surface); border: 1px solid var(--ligne); border-radius: 12px; box-shadow: 0 12px 40px #0008; }
+  .maj-carte::backdrop { background: #0a09104d; }
+  .maj-carte h2 { margin: 0 0 8px; font-size: 14px; }
+  .maj-carte p, .maj-carte ol { margin: 6px 0; font-size: 12.5px; color: var(--doux); }
+  .maj-carte ol { padding-left: 18px; }
+  .maj-carte code { font-family: "Cascadia Mono", Consolas, monospace; color: var(--texte); }
+  .maj-carte .maj-msg { color: var(--texte); }
+  .maj-carte .maj-msg:empty { display: none; }
+  .maj-boutons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+  .maj-boutons button { font: inherit; font-size: 12px; padding: 5px 12px; border-radius: 8px; cursor: pointer; color: var(--texte); background: var(--surface2); border: 1px solid var(--ligne); }
+  .maj-boutons button.principal { background: #3a2f66; border-color: #5a4a9a; font-weight: 600; }
+  .maj-boutons button[hidden] { display: none; }
   /* REFAIRE CONVERSATION : bandeau ambre sobre, conversation Claude trop longue */
   .relais { position: absolute; left: 0; right: 0; top: 0; z-index: 19; display: flex; align-items: center; gap: 14px; padding: 10px 14px;
     background: linear-gradient(#2b1d06f2, #1d1304f2); border-bottom: 2px solid #ffb020; box-shadow: 0 6px 22px #ffb02040; }
@@ -233,7 +252,11 @@
     <div class="marque">
       <canvas id="logo" width="16" height="16" aria-hidden="true"></canvas>
       <div>
-        <h1>Kinan Orchestre</h1>
+        <div class="titre-ligne">
+          <h1>Kinan Orchestre</h1>
+          <button type="button" id="version" class="version mono" hidden><span id="version-txt"></span><svg class="v-coche" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg></button>
+          <button type="button" id="pastille-maj" class="pastille-maj" hidden>mise à jour disponible</button>
+        </div>
         <p id="sous-titre">Bureau des agents</p>
       </div>
     </div>
@@ -245,6 +268,7 @@
         <button type="button" id="btn-test" class="bouton" title="Joue le son d'une question puis celui d'une fin de travail">Tester le son</button>
       </div>
       <button type="button" id="pastille-tokenout" class="pastille-tokenout" hidden title="Limite d'utilisation Claude atteinte : cliquer pour réafficher l'enseigne">TOKEN OUT</button>
+      <span id="bulle-limite" class="bulle-limite" role="status" hidden></span>
       <button type="button" id="btn-economies" class="btn-coche" aria-haspopup="dialog" aria-label="Rapport des 3 dernières heures"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg><span id="pastille-eco" class="eco-nouveau" hidden>nouveau</span></button>
       <ul class="compteurs" id="compteurs" aria-label="Résumé des états"></ul>
       <span class="mode" id="mode">connexion…</span>
@@ -269,14 +293,13 @@
           <button type="button" id="rl-reporter">Reporter 20 min</button>
         </div>
       </div>
-      <div class="tokenout" id="tokenout" role="alert" hidden>
-        <div class="tk-amp haut" aria-hidden="true"></div><div class="tk-amp bas" aria-hidden="true"></div>
-        <button type="button" class="tk-masquer" id="tk-masquer" title="Réduire en pastille dans l'en-tête">Masquer</button>
-        <p class="tk-titre">TOKEN <span>OUT</span></p>
-        <p class="tk-sous" id="tk-sous"></p>
-      </div>
       <div class="cadre" id="cadre">
         <canvas id="toile" width="400" height="270" role="img" aria-label="Bureau des agents"></canvas>
+        <div class="tokenout" id="tokenout" role="alert" hidden>
+          <p class="tk-titre">TOKEN OUT</p>
+          <p class="tk-sous" id="tk-sous"></p>
+          <button type="button" class="tk-masquer" id="tk-masquer" title="Réduire en pastille dans l'en-tête" aria-label="Masquer l'enseigne TOKEN OUT">×</button>
+        </div>
       </div>
     </section>
     <aside class="panneau">
@@ -296,9 +319,16 @@
     <div id="eco-corps" aria-live="polite"></div>
   </div></dialog>
   <script src="theme.js"></script>
+  <dialog id="maj-carte" class="maj-carte" aria-labelledby="maj-titre">
+    <h2 id="maj-titre">Version et mises à jour</h2>
+    <div id="maj-corps"></div>
+    <p class="maj-msg" id="maj-msg" role="status"></p>
+    <div class="maj-boutons"><button type="button" id="maj-go" class="principal" hidden>Mettre à jour</button><button type="button" id="maj-fermer">Fermer</button></div>
+  </dialog>
   <script src="avatars.js"></script>
   <script src="scene.js"></script>
   <script src="boutons.js"></script>
   <script src="economies-carte.js"></script>
+  <script src="maj-limites.js"></script>
 </body>
 </html>

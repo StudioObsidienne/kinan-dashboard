@@ -28,6 +28,8 @@
   const api = window.kinanUI;
   const demo = /[?&]tokenout=1/.test(location.search); // ?demo=1&tokenout=1 : force l'affichage (captures)
   let etat = { actif: false }, masque = false, cleMasque = null;
+  // L'enseigne est dessinée par scene.js (accrochée dans la scène) : on lui signale seulement si elle doit être visible.
+  const signaler = (v) => document.dispatchEvent(new CustomEvent('kinan-tokenout', { detail: { visible: v } }));
   const hhmm = (ms) => new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
   const jourP = (ms) => new Date(ms).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' });
   const quand = (e) => (jourP(e.reprise) === jourP(Date.now()) ? hhmm(e.reprise)
@@ -36,13 +38,14 @@
   const typeTxt = (t) => (t === '5 h' ? 'Limite 5 h atteinte' : t === 'semaine' ? 'Limite hebdomadaire atteinte' : "Limite d'utilisation atteinte");
   function rendre() {
     const actif = etat.actif && etat.reprise > Date.now();
-    if (!actif) { bandeau.hidden = true; pastille.hidden = true; return; }
+    if (!actif) { bandeau.hidden = true; pastille.hidden = true; signaler(false); return; }
     const cle = String(etat.depuis);
     if (cle !== cleMasque) { cleMasque = cle; masque = false; }
     const retour = etat.repriseInconnue ? 'reprise inconnue' : 'retour à ' + quand(etat);
     sous.replaceChildren(document.createTextNode(typeTxt(etat.type) + ' · ' + retour));
     if (!etat.repriseInconnue) { sous.append(document.createTextNode(' · dans '), Object.assign(document.createElement('b'), { textContent: duree(etat.reprise - Date.now()) })); }
     bandeau.hidden = masque;
+    signaler(!masque);
     pastille.hidden = !masque;
     pastille.textContent = 'TOKEN OUT' + (etat.repriseInconnue ? '' : ' · ' + hhmm(etat.reprise));
   }

@@ -94,7 +94,9 @@ function lire() {
   if (typeof u.dossierTravail === 'string' && u.dossierTravail.length <= 260 && !/[\u0000-\u001f]/.test(u.dossierTravail) && path.isAbsolute(u.dossierTravail)) dossierTravail = path.resolve(u.dossierTravail);
   else if (u.dossierTravail !== undefined && u.dossierTravail !== null) alertes.push('dossierTravail : chemin absolu attendu, ignoré');
   const sons = { actif: !(u.sons && typeof u.sons === 'object' && u.sons.actif === false) };
-  return { dossier: DOSSIER, juge, agents, theme, themeApplique: l.ok, titreBureau, relais, dossierTravail, sons, alertes };
+  // Vérification des mises à jour (réseau : raw.githubusercontent.com, toutes les 6 h) : désactivée sauf « miseAJour.verifier: true ».
+  const miseAJour = { verifier: !!(u.miseAJour && typeof u.miseAJour === 'object' && u.miseAJour.verifier === true) };
+  return { dossier: DOSSIER, juge, agents, theme, themeApplique: l.ok, titreBureau, relais, dossierTravail, sons, miseAJour, alertes };
 }
 
 // Lecture mise en cache (la configuration est lue au démarrage ; « Recharger » relit le fichier).

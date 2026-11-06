@@ -1,3 +1,5 @@
+> **Update:** run `git pull` in this folder, then relaunch `lancer-kinan-os.cmd`. The dashboard can check for new versions itself (off by default, see `config.js`).
+
 # Kinan dashboard
 
 [Français](README.fr.md)
@@ -35,7 +37,9 @@ Check that the code contains no network call: `npm run verifier` (see "Network" 
 | Clones: several instances of the same agent at once, with a ×N badge | Depends on the events the plugin's hooks receive. |
 | Live tracking of several conversations (status box and bubbles) | A conversation appears only at the first event it sends. Bubbles show conversations that are working or waiting; idle ones are hidden. |
 | Next relay (time and context tokens remaining) and the "start a new conversation" banner | Estimate based on the end of the local Claude Code log of the followed conversation. Thresholds come from the `relais` section of the configuration. |
-| TOKEN OUT alert when a usage limit is reached, with the resume time | Reads the end of recent Claude Code logs every 30 seconds. Their format is not a documented interface: if the text cannot be read, the resume time is shown as unknown. |
+| TOKEN OUT alert when a usage limit is reached, with the resume time: a pixel sign drops from the ceiling of the scene and hangs on two chains above the agents ("×" shrinks it to a badge in the header) | Reads the end of recent Claude Code logs every 30 seconds. Their format is not a documented interface: if the text cannot be read, the resume time is shown as unknown. Reduced motion: no drop, no blinking. |
+| Red "limit" bubble when 10% or less of the Claude Code 5-hour or weekly limit remains | Needs the provided status line (`node outils/installer-statusline.js`), which writes `limites.json` from Claude Code's official `rate_limits` field. That field only exists for Claude.ai Pro and Max subscriptions, after the first response of a session. Without it, no bubble. |
+| Version shown next to the title, green check when up to date, "update available" badge with the steps | Check disabled by default (no connection): see `miseAJour.verifier`. Without it, only the installed version is shown. |
 | Green check: report on the last 3 hours (tokens per model, share delegated, estimated savings) | Estimate at public API prices, not an invoice. A subscription is not billed that way. |
 | Event log, Gestion window (Tasks, History, Tokens tabs) | Tasks are stored locally; the Tokens tab is an estimate from local logs. |
 | Sounds (Web Audio synthesis, no audio file) | Can be turned off with the Sounds button or `sons.actif: false`. |
@@ -72,6 +76,8 @@ Example:
 }
 ```
 
+Update check: `"miseAJour": { "verifier": true }` reads the latest published version (`package.json` of kinan-dashboard and `plugin.json` of kinan-orchestre, main branch, on raw.githubusercontent.com) at start-up when the last check is older than 6 hours, then every 6 hours. Network failure: nothing is shown. If the dashboard folder is a clean git repository tracking a remote branch, an "Update" button runs `git pull --ff-only` after confirmation (never forced, refused when there are local changes), then offers to restart. Otherwise the steps are only displayed. The plugin is never updated automatically. Boolean, `false` by default (no network).
+
 ## Network
 
 The dashboard opens no network connection:
@@ -79,6 +85,11 @@ The dashboard opens no network connection:
 - every page carries a Content-Security-Policy with `default-src 'none'` and `connect-src 'none'`;
 - the main process cancels every `http`, `https`, `ws` and `wss` request at the session level, refuses new windows, navigation outside local files and permission requests;
 - no module such as `http`, `https`, `net`, `tls`, `dns` or `child_process` is loaded, and there is no runtime dependency.
+
+Two declared exceptions, checked by the verifier:
+
+- `mise-a-jour.js` (update check and `git pull --ff-only`) is loaded only when `miseAJour.verifier` is `true`; a single origin, `raw.githubusercontent.com`, redirects are not followed;
+- `outils/statusline-limites.js` is run by Claude Code (status line), never by the dashboard. It uses no network; it starts a process only to re-run a status line that was installed before it.
 
 `node outils/verifier-hors-ligne.js` (or `npm run verifier`) checks these points statically and fails if a network call, a remote resource or a page without a strict CSP is found. It also lists every file access found in the code.
 
@@ -97,10 +108,14 @@ State folder (`~/.kinan-os/` or `KINAN_OS_DOSSIER`):
 | `taches.json` (tasks) | yes | yes, from the Tasks tab (with the plugin's lock file `state.lock`) |
 | `reglages.json` (window position, sounds, prices, context size) | yes | yes |
 | `son.log` (audio diagnostics) | no | appended on audio errors |
+| `limites.json` (5-hour and weekly limits, written by the status line) | yes, every 10 s | never by the dashboard |
+| `mise-a-jour.json` (update check cache) | yes, when enabled | yes, when enabled |
 
 Claude Code logs, read only: `~/.claude/projects/**/*.jsonl` and the `.meta.json` files of sub-agents (relay, TOKEN OUT, tokens, 3-hour report). Only the end of recent files is read.
 
-The dashboard writes nothing else and sends nothing anywhere.
+Status line: `node outils/installer-statusline.js` adds the `statusLine` key to `~/.claude/settings.json` (backup `settings.json.bak-kinan`, no other key changed). An existing status line is not overwritten: the new one re-runs it and its output stays visible. `--retirer` restores the previous one.
+
+The dashboard writes nothing else and sends nothing anywhere (except the update check, if you enable it).
 
 ## Development
 

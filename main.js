@@ -1,7 +1,7 @@
 // Kinan Orchestre (édition publique) : processus principal.
 // Lit les fichiers d'état locaux écrits par les hooks du plugin et les transmet à l'interface.
 // Aucun appel à Claude (0 jeton) et aucune connexion réseau : toute requête http(s)/ws est bloquée (voir bloquerReseau).
-const { app, BrowserWindow, Menu, screen, Notification, ipcMain, clipboard, session } = require('electron');
+const { app, BrowserWindow, Menu, screen, Notification, ipcMain, clipboard, session, dialog } = require('electron');
 const config = require('./config');
 const gestion = require('./gestion-ipc');
 const question = require('./question-ipc');
@@ -174,6 +174,17 @@ app.whenReady().then(() => {
     } catch { /* ne jamais planter */ }
   };
   releverTokenOut(); setInterval(releverTokenOut, 30000);
+  // Limites 5 h / hebdomadaire (écrites par la status line de Claude Code, outils/statusline-limites.js) : bulle rouge à 10 % ou moins. Lecture locale.
+  require('./limites').enregistrer({ ipcMain, BrowserWindow, dossierEtat: DOSSIER_ETAT });
+  // Version et mises à jour : DÉSACTIVÉ par défaut (zéro réseau). Activé seulement par « miseAJour.verifier: true » dans kinan.config.json ;
+  // le module réseau n'est alors chargé qu'à ce moment. Sinon : version locale seule, aucune requête, aucun git.
+  if (config.charger().miseAJour.verifier === true) require('./mise-a-jour').demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEtat: DOSSIER_ETAT, dossierAppli: __dirname, active: true });
+  else {
+    let v = '0.0.0'; try { v = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || v; } catch { /* ignoré */ }
+    const etatMaj = { active: false, verifie: null, appli: { locale: v, distante: null, nouvelle: false }, plugin: { locale: null, distante: null, nouvelle: false }, git: { possible: false, raison: 'vérification désactivée' } };
+    ipcMain.handle('maj:lire', () => etatMaj);
+    ipcMain.handle('maj:appliquer', () => ({ ok: false, message: 'Vérification des mises à jour désactivée (voir README).' }));
+  }
   // REFAIRE CONVERSATION : conversation la plus récente trop longue (toutes les 60 s, cache par chemin+taille+mtime).
   const cacheRelais = new Map();
   let etatRelais = { actif: false }, reporteJusqua = 0, derniereNotifRelais = 0;

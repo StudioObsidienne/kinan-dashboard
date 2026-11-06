@@ -1,3 +1,5 @@
+> **Mise à jour :** lance `git pull` dans ce dossier, puis relance `lancer-kinan-os.cmd`. Le tableau de bord peut vérifier seul les nouvelles versions (désactivé par défaut, voir `config.js`).
+
 # Tableau de bord Kinan
 
 [English](README.md)
@@ -35,7 +37,9 @@ Vérifier que le code ne contient aucun appel réseau : `npm run verifier` (voir
 | Clones : plusieurs exemplaires du même agent en même temps, badge ×N | Dépend des événements reçus par les hooks du plugin. |
 | Suivi en temps réel de plusieurs conversations (boîte d'état et bulles) | Une conversation n'apparaît qu'au premier événement qu'elle envoie. Les bulles montrent les conversations au travail ou en attente ; celles au repos sont masquées. |
 | Prochain relais (temps et jetons de contexte restants) et bandeau « refaire la conversation » | Estimation fondée sur la fin du journal local Claude Code de la conversation suivie. Seuils : section `relais` de la configuration. |
-| Alerte TOKEN OUT quand une limite d'utilisation est atteinte, avec l'heure de reprise | Lit la fin des journaux Claude Code récents toutes les 30 secondes. Leur format n'est pas une interface documentée : si le texte n'est pas lisible, l'heure de reprise est indiquée comme inconnue. |
+| Alerte TOKEN OUT quand une limite d'utilisation est atteinte, avec l'heure de reprise : une enseigne pixel tombe du plafond de la scène et reste accrochée par deux chaînes au-dessus des agents (« × » la réduit en pastille dans l'en-tête) | Lit la fin des journaux Claude Code récents toutes les 30 secondes. Leur format n'est pas une interface documentée : si le texte n'est pas lisible, l'heure de reprise est indiquée comme inconnue. Mouvement réduit : ni chute ni clignotement. |
+| Bulle rouge « limite » quand il reste 10 % ou moins de la limite 5 h ou hebdomadaire de Claude Code | Nécessite la status line fournie (`node outils/installer-statusline.js`), qui écrit `limites.json` à partir du champ officiel `rate_limits` de Claude Code. Ce champ n'existe que pour les abonnements Claude.ai Pro et Max, après la première réponse d'une session. Sans lui, pas de bulle. |
+| Version affichée à côté du titre, coche verte quand elle est à jour, pastille « mise à jour disponible » avec les étapes | Vérification désactivée par défaut (aucune connexion) : voir `miseAJour.verifier`. Sans elle, seule la version installée est affichée. |
 | Coche verte : rapport des 3 dernières heures (jetons par modèle, part déléguée, économie estimée) | Estimation au tarif public de l'API, pas une facture. Un abonnement n'est pas facturé ainsi. |
 | Journal des événements, fenêtre Gestion (onglets Tâches, Historique, Jetons) | Tâches enregistrées localement ; l'onglet Jetons est une estimation tirée des journaux locaux. |
 | Sons (synthèse Web Audio, aucun fichier audio) | Désactivables par le bouton Sons ou `sons.actif: false`. |
@@ -55,6 +59,7 @@ Le tableau de bord lit `kinan.config.json` dans le dossier d'état : `~/.kinan-o
 | `dossierTravail` | Quand la conversation suivie tourne dans ce chemin absolu, le sous-titre affiche `titreBureau` ; ailleurs, « Agent · nom de la conversation ». Sans cette clé, le nom d'une conversation connue est toujours affiché. | Chemin absolu de 260 caractères au plus |
 | `relais.minutes`, `relais.jetons` | Seuils de relais | 10 à 1 440 minutes ; 50 000 à 2 000 000 jetons |
 | `sons.actif` | Sons activés ou non par défaut | Booléen. Le réglage du bouton Sons est prioritaire. |
+| `miseAJour.verifier` | `true` : lit la dernière version publiée (`package.json` de kinan-dashboard et `plugin.json` de kinan-orchestre, branche main, sur raw.githubusercontent.com) au démarrage si la dernière vérification a plus de 6 h, puis toutes les 6 h. Échec réseau : rien n'est affiché. Si le dossier du tableau de bord est un dépôt git propre qui suit une branche distante, un bouton « Mettre à jour » lance `git pull --ff-only` après confirmation (jamais de force, refusé s'il y a des modifications locales), puis propose de relancer. Sinon, les étapes sont seulement affichées. Le plugin n'est jamais mis à jour automatiquement. | Booléen, `false` par défaut (zéro réseau) |
 
 Toute valeur invalide est ignorée et remplacée par la valeur par défaut. Le texte venant des fichiers est toujours inséré comme texte, jamais comme HTML.
 
@@ -65,6 +70,11 @@ Le tableau de bord n'ouvre aucune connexion réseau :
 - chaque page porte une Content-Security-Policy avec `default-src 'none'` et `connect-src 'none'` ;
 - le processus principal annule toute requête `http`, `https`, `ws` et `wss` au niveau de la session, refuse l'ouverture de nouvelles fenêtres, la navigation hors des fichiers locaux et les demandes d'autorisation ;
 - aucun module tel que `http`, `https`, `net`, `tls`, `dns` ou `child_process` n'est chargé, et il n'y a aucune dépendance d'exécution.
+
+Deux exceptions déclarées, contrôlées par le vérificateur :
+
+- `mise-a-jour.js` (vérification des mises à jour et `git pull --ff-only`) n'est chargé que si `miseAJour.verifier` vaut `true` ; une seule origine, `raw.githubusercontent.com`, sans redirection suivie ;
+- `outils/statusline-limites.js` est lancé par Claude Code (status line), jamais par le tableau de bord. Il n'utilise pas le réseau ; il ne lance un processus que pour relancer une status line déjà installée avant lui.
 
 `node outils/verifier-hors-ligne.js` (ou `npm run verifier`) contrôle ces points de façon statique et échoue s'il trouve un appel réseau, une ressource distante ou une page sans CSP stricte. Il liste aussi chaque accès aux fichiers relevé dans le code.
 
@@ -83,10 +93,14 @@ Dossier d'état (`~/.kinan-os/` ou `KINAN_OS_DOSSIER`) :
 | `taches.json` (tâches) | oui | oui, depuis l'onglet Tâches (avec le verrou `state.lock` du plugin) |
 | `reglages.json` (position de la fenêtre, sons, tarifs, taille du contexte) | oui | oui |
 | `son.log` (diagnostic audio) | non | complété en cas d'erreur audio |
+| `limites.json` (limites 5 h et hebdomadaire, écrit par la status line) | oui, toutes les 10 s | jamais par le tableau de bord |
+| `mise-a-jour.json` (cache de la vérification des mises à jour) | oui, si activée | oui, si activée |
 
 Journaux Claude Code, en lecture seule : `~/.claude/projects/**/*.jsonl` et les fichiers `.meta.json` des sous-agents (relais, TOKEN OUT, jetons, rapport de 3 heures). Seule la fin des fichiers récents est lue.
 
-Le tableau de bord n'écrit rien d'autre et n'envoie rien nulle part.
+Status line : `node outils/installer-statusline.js` ajoute la clé `statusLine` à `~/.claude/settings.json` (copie de sauvegarde `settings.json.bak-kinan`, aucune autre clé modifiée). Une status line déjà présente n'est pas écrasée : elle est relancée par la nouvelle et sa sortie reste affichée. `--retirer` remet la précédente.
+
+Le tableau de bord n'écrit rien d'autre et n'envoie rien nulle part (sauf la vérification des mises à jour, si tu l'actives).
 
 ## Développement
 
