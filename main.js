@@ -89,6 +89,10 @@ function creerFenetre() {
   fenetre.on('resize', planifier); fenetre.on('move', planifier);
   fenetre.on('close', () => memoriserBounds(fenetre));
   fenetrePrincipale = fenetre;
+  // Windows : l'épinglage à la barre des tâches relance « electron.exe <dossier de l'appli> » avec l'icône Kinan (sinon l'écran d'accueil d'Electron s'ouvre).
+  if (process.platform === 'win32') {
+    try { fenetre.setAppDetails({ appId: 'kinan-os.dashboard', appIconPath: path.join(__dirname, 'assets', 'icon.ico'), appIconIndex: 0, relaunchCommand: `"${process.execPath}" "${__dirname}"`, relaunchDisplayName: 'Kinan Orchestre' }); } catch { /* sans effet */ }
+  }
   fenetre.on('closed', () => { if (fenetrePrincipale === fenetre) fenetrePrincipale = null; });
   fenetre.loadFile(path.join(__dirname, 'src', 'index.html'));
 
