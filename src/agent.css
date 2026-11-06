@@ -1,0 +1,11 @@
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#14121c;color:#e8e6f0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;padding:14px 16px;overflow:hidden}
+.haut{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+#portrait{width:72px;height:72px;image-rendering:pixelated;flex:none;border-radius:8px;background:#1d1a2a;border:1px solid #2e2a42}
+.nom{font-size:17px;font-weight:600}
+.muet{color:#9a96b0;font-size:12px}
+.etat.repos{color:#6ee7a8}.etat.travail{color:#fbbf24}.etat.erreur{color:#f87171}.etat.doute{color:#a78bfa}
+.bloc{border-top:1px solid #2e2a42;padding:6px 0}
+h2{margin:0 0 2px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#a78bfa;font-weight:600}
+.bloc div div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -1,0 +1,16 @@
+{
+  "name": "kinan-dashboard",
+  "version": "0.1.0",
+  "description": "Offline Electron dashboard for the kinan-orchestre Claude Code plugin: agents, conversations, relay reminder, local logs. No network.",
+  "main": "main.js",
+  "private": true,
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "electron .",
+    "verifier": "node outils/verifier-hors-ligne.js",
+    "check": "node outils/verifier-hors-ligne.js"
+  },
+  "devDependencies": {
+    "electron": "45.2.3"
+  }
+}

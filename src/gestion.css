@@ -1,0 +1,85 @@
+:root{--fond:#14121c;--carte:#1d1a2a;--bord:#2e2a42;--texte:#e8e6f0;--muet:#9a96b0;--accent:#a78bfa;--ok:#6ee7a8;--alerte:#fbbf24;--err:#f87171}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--texte);font:15px/1.5 var(--police-texte,"Segoe UI",system-ui,sans-serif)}
+h1,h2{font-family:var(--police-titre,inherit)}
+header{display:flex;align-items:center;gap:24px;padding:14px 24px;border-bottom:1px solid var(--bord)}
+h1{font-size:18px;margin:0;font-weight:600}
+nav{display:flex;gap:4px}
+nav button{background:none;border:0;color:var(--muet);padding:8px 14px;border-radius:8px;cursor:pointer;font:inherit}
+nav button[aria-selected=true]{background:var(--carte);color:var(--texte)}
+main{padding:20px 24px;max-width:960px;margin:0 auto}
+button,select,input,textarea{font:inherit;color:var(--texte);background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:8px 12px}
+button{cursor:pointer}button:hover{border-color:var(--accent)}
+button.primaire{background:var(--accent);color:var(--sur-accent,#14121c);border-color:var(--accent);font-weight:600}
+button.danger{color:var(--err)}
+input[type=text],input[type=search],textarea{width:100%}
+input[type=checkbox]{width:18px;height:18px;padding:0;accent-color:var(--accent)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+textarea{min-height:140px;resize:vertical;font-family:inherit}
+#form-tache{display:flex;gap:8px}
+.encart{margin:12px 0;padding:12px 14px;border:1px solid var(--accent);border-radius:10px;background:var(--carte)}
+.encart .actions{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.agents{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--bord);border-radius:99px;font-size:13px;background:var(--carte)}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.badge.occupe i{background:var(--alerte)}
+.liste{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.liste li{display:flex;gap:12px;align-items:center;padding:10px 14px;background:var(--carte);border:1px solid var(--bord);border-radius:10px}
+.liste .titre{flex:1}
+.liste li.fait .titre{text-decoration:line-through;color:var(--muet)}
+.muet{color:var(--muet);font-size:13px}
+.barre{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.barre input{flex:1;min-width:160px;width:auto}
+.avertissement{padding:10px 14px;border:1px solid var(--alerte);border-radius:10px;color:var(--alerte);margin:0 0 14px}
+.fiche{background:var(--carte);border:1px solid var(--bord);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.fiche header{padding:0 0 10px;border:0;gap:10px;flex-wrap:wrap}
+.fiche h2{font-size:15px;margin:0;flex:1}
+.etiquette{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--bord);color:var(--muet)}
+.etiquette.exemple{color:var(--alerte);border-color:var(--alerte)}
+.champ{margin:6px 0}.champ b{color:var(--muet);font-weight:500;margin-right:6px}
+.corps{white-space:pre-wrap;background:var(--fond);border-radius:8px;padding:10px 12px;margin:8px 0}
+.points{border:1px solid var(--alerte);border-radius:8px;padding:8px 12px;margin:8px 0;background:rgba(251,191,36,.08)}
+.points strong{color:var(--alerte)}.points ul{margin:4px 0 0 18px;padding:0}
+.pied{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.pastille{background:var(--accent);color:var(--sur-accent,#14121c);border-radius:99px;font-size:12px;font-weight:700;padding:0 7px;margin-left:4px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--bord);font-size:14px;vertical-align:top}
+th{color:var(--muet);font-weight:500}
+.e-travail{color:var(--alerte)}.e-erreur{color:var(--err)}.e-doute{color:var(--accent)}.e-repos{color:var(--ok)}
+[hidden]{display:none!important}
+.jauge{height:14px;background:var(--fond);border-radius:99px;overflow:hidden;margin:10px 0;border:1px solid var(--bord)}
+#jauge-ctx{height:100%;width:0;background:var(--ok)}
+.deux{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.deux .fiche h2{margin-bottom:8px}
+.barres{display:flex;gap:10px;align-items:flex-end;height:160px;margin:8px 0}
+.barres .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px;font-size:12px;color:var(--muet)}
+.barres .b{width:100%;background:var(--accent);border-radius:6px 6px 0 0;min-height:2px}
+.ligne{display:flex;justify-content:space-between;padding:2px 0}.ligne b{font-weight:500}
+@media(max-width:760px){.deux{grid-template-columns:1fr}}
+#ctx-max{width:130px}
+.niv-critique b{color:var(--err)}.niv-alerte b{color:var(--alerte)}.niv-info b{color:var(--muet)}.niv-info{color:var(--muet)}
+button:disabled{opacity:.5;cursor:default}
+.sous-titre{font-size:13px;margin:22px 0 8px;color:var(--muet);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.grille-form{display:grid;grid-template-columns:1fr 1fr 150px;gap:10px;margin:10px 0}
+.grille-form label{display:grid;gap:4px;color:var(--muet);font-size:12px}
+.pas{margin:8px 0 0 18px;padding:0;color:var(--muet)}.pas li{margin:3px 0}
+details summary{cursor:pointer;color:var(--accent)}
+.ok-txt{color:var(--ok)}.err-txt{color:var(--err)}
+@media(max-width:760px){.grille-form{grid-template-columns:1fr}}
+.prix-manquant input{width:150px;margin-right:6px}
+.barre input[type=search]{max-width:260px}
+.ag-ligne{margin:6px 0}.ag-ligne .nom{display:flex;justify-content:space-between;gap:8px}
+.ag-barre{height:6px;background:var(--fond);border-radius:99px;overflow:hidden;margin-top:3px}.ag-barre i{display:block;height:100%;background:var(--accent)}
+
+.trois{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px}
+@media (max-width:760px){.trois{grid-template-columns:1fr}}
+.carte-j h2{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--muet);text-transform:uppercase;letter-spacing:.06em}
+.carte-j .gros{font-size:28px;font-weight:700;line-height:1.1}
+.carte-j .euros{font-size:17px;color:var(--accent);margin-top:2px}
+.petit{font-size:12px;margin-top:6px}
+.note-jetons{margin:8px 0}
+.relais-ligne{margin:0 0 12px;padding:8px 14px;border:1px solid #ffb020;border-radius:10px;background:#2b1d06;color:#ffeccb;font-weight:600;font-size:13px}
+.relais-ligne[hidden]{display:none}
+.limite{margin:0 0 12px;padding:10px 14px;border:1px solid #ff6b78;border-radius:10px;background:#3a0f15;color:#ffd9dc;font-weight:600}
+.tarifs{border-collapse:collapse;margin-bottom:10px}.tarifs th,.tarifs td{padding:4px 8px;text-align:left;font-size:13px}.tarifs input{width:90px;padding:4px 8px}
+#tarifs-lien{color:var(--muet);font-size:12px}

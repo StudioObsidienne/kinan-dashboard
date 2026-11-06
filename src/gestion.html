@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>Kinan OS : Gestion</title>
+<link rel="stylesheet" href="gestion.css">
+</head>
+<body>
+<header>
+  <h1>Gestion</h1>
+  <nav role="tablist">
+    <button role="tab" data-onglet="taches" aria-selected="true">Tâches</button>
+    <button role="tab" data-onglet="histo" aria-selected="false">Historique</button>
+    <button role="tab" data-onglet="jetons" aria-selected="false">Jetons</button>
+  </nav>
+</header>
+<main>
+  <section id="taches">
+    <form id="form-tache">
+      <input id="nouvelle" type="text" maxlength="300" placeholder="Nouvelle tâche (ex : corriger le style de la page d'accueil)" autocomplete="off">
+      <button type="submit" class="primaire">Ajouter</button>
+    </form>
+    <div class="barre"><input id="rech-taches" type="search" placeholder="Rechercher une tâche…" autocomplete="off" aria-label="Rechercher dans les tâches"><span id="cpt-taches" class="muet"></span></div>
+    <div id="proposition" class="encart" hidden></div>
+    <div id="agents-etat" class="agents"></div>
+    <ul id="liste-taches" class="liste"></ul>
+  </section>
+  <section id="histo" hidden>
+    <div class="barre">
+      <select id="filtre-agent" aria-label="Filtrer par agent"><option value="">Tous les agents</option></select>
+      <input id="recherche" type="search" placeholder="Rechercher…" autocomplete="off">
+      <button id="rafraichir-histo">Actualiser</button><span id="cpt-histo" class="muet"></span>
+    </div>
+    <table><thead><tr><th>Date</th><th>Agent</th><th>État</th><th>Tâche</th></tr></thead><tbody id="corps-histo"></tbody></table>
+    <p id="vide-histo" class="muet" hidden>Aucun événement pour l'instant : l'historique se remplit quand les agents travaillent.</p>
+  </section>
+  <section id="jetons" hidden>
+    <p id="limite-atteinte" class="limite" role="alert" hidden></p>
+    <p id="refaire-conv" class="relais-ligne" role="status" hidden></p>
+    <div class="barre"><button id="rafraichir-jetons">Actualiser</button><span id="maj-jetons" class="muet"></span></div>
+    <div class="trois">
+      <div class="fiche carte-j"><h2 title="Journée de travail : démarre à 5 h du matin (réglable : clé debutJournee dans reglages.json)">Aujourd'hui (depuis 5 h)</h2><div class="gros" id="j-jour"></div><div class="euros" id="e-jour"></div><div class="muet petit" id="c-jour"></div></div>
+      <div class="fiche carte-j"><h2>Cette semaine</h2><div class="gros" id="j-semaine"></div><div class="euros" id="e-semaine"></div><div class="muet petit" id="c-semaine"></div></div>
+      <div class="fiche carte-j"><h2>Ce mois</h2><div class="gros" id="j-mois"></div><div class="euros" id="e-mois"></div><div class="muet petit" id="c-mois"></div></div>
+    </div>
+    <div class="fiche">
+      <h2>Fenêtre de contexte (session la plus récente)</h2>
+      <div class="jauge"><div id="jauge-ctx"></div></div>
+      <div id="txt-ctx" class="champ"></div>
+      <label class="champ muet">Maximum : <input id="ctx-max" type="number" min="1000" step="1000"> jetons</label>
+    </div>
+    <p class="muet note-jetons">Estimation au tarif de l'API Claude ; ton abonnement n'est pas facturé à l'usage : ce montant est la valeur équivalente, pas ce que tu paies. Jetons = entrée + sortie + cache créé ; le cache lu (quasi gratuit) est affiché à part. Semaine depuis lundi, mois calendaire.</p>
+    <p class="muet note-jetons"><span id="tarifs-info"></span> <a href="#" id="tarifs-lien">modifier les tarifs</a></p>
+    <div class="fiche" id="tarifs-edit" hidden>
+      <h2>Tarifs (USD par million de jetons)</h2>
+      <table class="tarifs"><thead><tr><th>Modèle</th><th>Entrée</th><th>Sortie</th><th>Cache écrit</th><th>Cache lu</th></tr></thead><tbody id="tarifs-corps"></tbody></table>
+      <label class="champ muet">Taux USD → EUR : <input id="taux-eur" type="number" step="0.01" min="0.01"></label>
+      <div class="barre"><button id="tarifs-enreg" class="primaire">Enregistrer</button><button id="tarifs-defaut">Valeurs d'origine</button><span id="tarifs-msg" class="muet"></span></div>
+    </div>
+  </section>
+</main>
+<script src="theme.js"></script>
+<script src="gestion.js"></script>
+</body>
+</html>
