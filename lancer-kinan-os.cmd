@@ -20,4 +20,5 @@ if not exist "node_modules\electron\dist\ffmpeg.dll" (
   pause
   exit /b 1
 )
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0outils/raccourci.ps1" >nul 2>&1
 call npm start
