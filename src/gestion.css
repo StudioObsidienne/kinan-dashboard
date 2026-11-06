@@ -83,3 +83,6 @@ details summary{cursor:pointer;color:var(--accent)}
 .limite{margin:0 0 12px;padding:10px 14px;border:1px solid #ff6b78;border-radius:10px;background:#3a0f15;color:#ffd9dc;font-weight:600}
 .tarifs{border-collapse:collapse;margin-bottom:10px}.tarifs th,.tarifs td{padding:4px 8px;text-align:left;font-size:13px}.tarifs input{width:90px;padding:4px 8px}
 #tarifs-lien{color:var(--muet);font-size:12px}
+.devis td,.devis th{padding:4px 8px}.devis{border-collapse:collapse;margin:8px 0}.devis td:last-child,.devis th:last-child{text-align:right}
+.recap{white-space:normal}.recap .rl{padding:5px 0 5px 10px;border-left:2px solid var(--muet);margin:4px 0;line-height:1.45}.recap .rt{border-left-color:var(--accent);font-weight:600}.recap .ra{border-left-color:var(--alerte)}
+#courrier textarea{width:100%;min-height:140px}

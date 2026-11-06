@@ -29,6 +29,18 @@ function comparer(a, b) {
   return pa === pb ? 0 : pa ? -1 : 1;
 }
 
+// Pop-up « Nouvelle mise à jour » dans l'appli : une seule fois par version publiée (appli et plugin séparément).
+// deja = versions déjà annoncées, mémorisées dans le cache (clé « annonce »). Fonctions pures (testées dans test/mise-a-jour.test.js).
+function aAnnoncer(etat, deja) {
+  const d = deja && typeof deja === 'object' ? deja : {};
+  return ['appli', 'plugin'].filter((k) => etat && etat[k] && etat[k].nouvelle && etat[k].distante && d[k] !== etat[k].distante);
+}
+function marquerAnnonce(etat, deja) {
+  const n = { ...(deja && typeof deja === 'object' ? deja : {}) };
+  for (const k of aAnnoncer(etat, n)) n[k] = etat[k].distante;
+  return n;
+}
+
 function telecharger(chemin) {
   return new Promise((fin) => {
     let fini = false; const rendre = (v) => { if (!fini) { fini = true; fin(v); } };
@@ -125,6 +137,7 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
       etat[k].distante = d;
       etat[k].nouvelle = !!(d && etat[k].locale && comparer(d, etat[k].locale) > 0);
     }
+    etat.aAnnoncer = active ? aAnnoncer(etat, cache.annonce) : [];
   };
   const notifier = () => {
     try {
@@ -156,6 +169,8 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
   const majGit = async () => { try { etat.git = await etatGit(dossierAppli); } catch { etat.git = { possible: false, raison: 'git indisponible' }; } diffuser(); };
 
   ipcMain.handle('maj:lire', () => etat);
+  // Pop-up affiché : les versions annoncées sont mémorisées (plus jamais de pop-up pour elles).
+  ipcMain.handle('maj:vu', () => { if (!active) return false; cache.annonce = marquerAnnonce(etat, cache.annonce); appliquerCache(); ecrireCache(); diffuser(); return true; });
   ipcMain.handle('maj:appliquer', async (e) => {
     if (!active) return { ok: false, message: 'Vérification des mises à jour désactivée.' };
     await majGit();
@@ -185,4 +200,4 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
   return { etat, verifier };
 }
 
-module.exports = { demarrer, comparer, versionValide, versionPluginLocale, etatGit, mettreAJour };
+module.exports = { demarrer, aAnnoncer, marquerAnnonce, comparer, versionValide, versionPluginLocale, etatGit, mettreAJour };

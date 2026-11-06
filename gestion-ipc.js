@@ -276,7 +276,7 @@ function enregistrerJetons() {
 
 let fenetre = null;
 function ouvrirGestion(onglet) {
-  const ok = ['taches', 'histo', 'jetons'].includes(onglet) ? onglet : null; // onglet validé côté main
+  const ok = ['taches', 'histo', 'jetons', 'courrier'].includes(onglet) ? onglet : null; // onglet validé côté main
   if (fenetre && !fenetre.isDestroyed()) {
     if (fenetre.isMinimized()) fenetre.restore();
     fenetre.focus();
@@ -286,7 +286,7 @@ function ouvrirGestion(onglet) {
   fenetre = new BrowserWindow({
     width: 1000, height: 720, minWidth: 700, minHeight: 500,
     backgroundColor: '#14121c', title: 'Kinan Orchestre : Gestion',
-    icon: path.join(__dirname, 'assets', 'icon.png'),
+    icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });

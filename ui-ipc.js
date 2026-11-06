@@ -11,7 +11,7 @@ function ouvrirLegende() {
   }
   fenetreLegende = new BrowserWindow({
     width: 420, height: 520, minWidth: 340, minHeight: 360, backgroundColor: '#14121c', title: 'Kinan Orchestre : légende',
-    icon: path.join(__dirname, 'assets', 'icon.png'), autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'), autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
   fenetreLegende.loadFile(path.join(__dirname, 'src', 'legende.html'));

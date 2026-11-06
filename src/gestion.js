@@ -47,10 +47,11 @@ function proposerAgent(titre) {
 // ----- Onglets -----
 document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => {
   document.querySelectorAll('nav button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-  for (const s of ['taches', 'histo', 'jetons']) $(s).hidden = s !== b.dataset.onglet;
+  for (const s of ['taches', 'histo', 'jetons', 'courrier']) $(s).hidden = s !== b.dataset.onglet;
   if (b.dataset.onglet === 'histo') chargerHisto();
   if (b.dataset.onglet === 'taches') rafraichirTaches();
   if (b.dataset.onglet === 'jetons') chargerJetons();
+  if (b.dataset.onglet === 'courrier') chargerCourrier();
 }));
 
 // ----- Onglet 1 : tâches -----
@@ -228,11 +229,209 @@ setInterval(() => { if (!$('jetons').hidden && !document.hidden) chargerJetons()
 rafraichirTaches();
 setInterval(() => { if (!$('taches').hidden) rafraichirTaches(); }, 5000);
 
+// ----- Onglet Courrier (option désactivée par défaut) -----
+const C = window.courrier || null;
+let FOURN = [], optionActive = false, typeRecap = 'mails', remplissageFait = false;
+const msg = (id, t, classe) => { $(id).textContent = t || ''; $(id).className = classe || 'muet'; };
+const champTexte = (nom, valeur) => el('div', { class: 'champ' }, el('b', { texte: nom }), el('span', { texte: String(valeur ?? '') }));
+const fmt = (n, devise) => { try { return Number(n).toLocaleString('fr-FR', { style: 'currency', currency: /^[A-Z]{3}$/.test(devise || '') ? devise : 'EUR' }); } catch { return String(n); } };
+const libSec = (s) => (s === 'starttls' ? 'STARTTLS' : 'SSL/TLS');
+const decrireServeur = (s) => (s ? `${s.hote}:${s.port} (${libSec(s.securite)})` : '');
+
+function aideFournisseur() {
+  const f = FOURN.find((x) => x.id === $('c-fournisseur').value) || FOURN[FOURN.length - 1];
+  if (!f) return;
+  $('c-perso').hidden = f.id !== 'autre';
+  $('c-serveurs').textContent = f.imap ? `Serveurs utilisés : lecture ${decrireServeur(f.imap)}, envoi ${decrireServeur(f.smtp)}.` : 'Saisis les serveurs indiqués par ton fournisseur (connexion chiffrée obligatoire).';
+  $('c-aide').replaceChildren(el('strong', { texte: 'Mot de passe : ' }), f.motDePasse, el('br'), el('strong', { texte: 'Accès : ' }), f.activer);
+}
+// Récap lisible : une ligne par point, la première en titre, les urgences en couleur. Texte inséré comme texte, jamais comme HTML.
+function afficherRecap(texte) {
+  let lignes = String(texte).split(/\r?\n/).map((l) => l.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean);
+  if (lignes.length === 1) lignes = lignes[0].split(/(?<=[.!?])\s+(?=[A-ZÉÈÀÂÔÎ0-9])/).map((l) => l.trim()).filter(Boolean);
+  $('recap-texte').replaceChildren(...lignes.map((l, i) => el('div', { class: 'rl' + (i === 0 ? ' rt' : '') + (i > 0 && /urgen|suspect|attention|à vérifier/i.test(l) ? ' ra' : ''), texte: l })));
+}
+async function chargerCourrier() {
+  if (!C) return;
+  try {
+    const o = await C.option();
+    optionActive = !!o.actif; FOURN = o.fournisseurs || [];
+    $('c-off').hidden = optionActive; $('c-on').hidden = !optionActive;
+    if (!optionActive) return;
+    if (!$('c-fournisseur').options.length) { $('c-fournisseur').replaceChildren(...FOURN.map((f) => el('option', { value: f.id, texte: f.nom }))); }
+    const s = await C.statut();
+    if (s.ok === false) return;
+    if (!remplissageFait) { // valeurs enregistrées (jamais le mot de passe)
+      remplissageFait = true;
+      if (s.fournisseur) $('c-fournisseur').value = s.fournisseur;
+      $('c-adresse').value = s.adresse || ''; $('c-identifiant').value = s.identifiant || '';
+      if (s.fournisseur === 'autre' && s.serveurs) {
+        $('c-imap-hote').value = s.serveurs.imap.hote; $('c-imap-port').value = s.serveurs.imap.port; $('c-imap-sec').value = s.serveurs.imap.securite;
+        $('c-smtp-hote').value = s.serveurs.smtp.hote; $('c-smtp-port').value = s.serveurs.smtp.port; $('c-smtp-sec').value = s.serveurs.smtp.securite;
+      }
+    }
+    aideFournisseur();
+    const conn = $('etat-conn');
+    if (!s.chiffrementDisponible) conn.textContent = "Le chiffrement du système n'est pas disponible : impossible d'enregistrer des identifiants.";
+    else if (!s.configure) conn.textContent = "Aucune boîte connectée. Choisis ton fournisseur, saisis l'adresse et un mot de passe d'application, puis Enregistrer et Tester.";
+    else conn.textContent = `Identifiants enregistrés pour ${s.adresse} (chiffrés)` + (s.etatConnexion === 'ok' ? ' : connexion vérifiée.' : s.etatConnexion === 'erreur' ? ' : dernier test en échec.' : ' : pas encore testés.') + (s.avertissements.length ? ' ' + s.avertissements.join(' ') : '');
+    $('c-tester').disabled = $('c-relever').disabled = $('c-oublier').disabled = !s.configure;
+    $('boite-info').textContent = !s.configure ? "Rien à relever tant que la boîte n'est pas connectée." :
+      (s.derniereReleve ? 'Dernière relève : ' + new Date(s.derniereReleve).toLocaleString('fr-FR') + ' · ' + s.nouveaux + ' nouveau(x) mail(s)' : "Aucune relève pour l'instant.") +
+      (s.ignores ? ' · ' + s.ignores + ' mail(s) illisible(s) ignoré(s)' : '') + ' · ' + s.totalMails + ' mail(s) en local' + (s.etatConnexion === 'ok' ? ' · relève automatique toutes les 30 min.' : '.') + (s.erreurReleve ? ' Dernière erreur : ' + s.erreurReleve : '');
+    $('grille-info').textContent = s.grille.ok ? `Grille de prix : ${s.grille.lignes} ligne(s).` : `Devis : ${s.grille.erreur}. Copie exemples/grille-prix.exemple.json dans ${s.dossierEchange} sous le nom grille-prix.json, puis remplace les lignes fictives par tes prestations et tes prix.`;
+    const e = await C.recapEtat();
+    const lib = { repos: 'Aucun récap lancé.', 'en cours': 'En cours… (Claude travaille en arrière-plan)', termine: 'Terminé : ' + e.message, erreur: 'Erreur : ' + e.message };
+    msg('recap-etat', lib[e.etat] || '', e.etat === 'erreur' ? 'err-txt' : e.etat === 'termine' ? 'ok-txt' : 'muet');
+    $('recap-mails').disabled = $('recap-devis').disabled = e.etat === 'en cours';
+    $('recap-texte').hidden = !e.texte; afficherRecap(e.texte || '');
+    $('recap-copier').hidden = $('recap-txt').hidden = !e.texte; typeRecap = e.type === 'devis' ? 'devis' : 'mails';
+    chargerValider(); chargerEnvoi();
+  } catch { /* on réessaiera */ }
+}
+
+// Brouillon à valider (réponse ou devis). Les prix viennent de la grille ; seules les lignes sans prix se saisissent ici.
+function ficheBrouillon(item) {
+  const d = item.contenu, devis = d.type === 'devis', mail = devis ? (d.mail || {}) : d;
+  const cb = el('input', { type: 'checkbox', 'aria-label': 'Sélectionner', 'data-fichier': item.fichier });
+  const f = el('div', { class: 'fiche' }, el('header', {}, cb,
+    el('h2', { texte: devis ? `Devis : ${d.client || 'client ?'}` : `Réponse au mail ${d.mailId || ''}` }),
+    el('span', { class: 'etiquette', texte: devis ? 'devis' : (d.categorie || 'mail') }), d.urgence ? el('span', { class: 'etiquette', texte: 'urgence ' + d.urgence }) : null));
+  if (d.resume) f.append(el('div', { class: 'muet', texte: d.resume }));
+  const champsPrix = []; let majTotal = () => {};
+  const bValider = el('button', { class: 'primaire', texte: 'Valider' });
+  if (devis) {
+    const lignes = d.lignes || [];
+    const prixOk = (v) => { const n = typeof v === 'number' ? v : (typeof v === 'string' && /^\s*\d+([.,]\d{1,2})?\s*$/.test(v) ? parseFloat(v.replace(',', '.')) : NaN); return Number.isFinite(n) && n >= 1 && n <= 1000000 ? n : null; };
+    const celTotal = el('td', { texte: '' }), celTva = el('td', { texte: '' }), celTtc = el('td', { texte: '' });
+    const trs = lignes.map((l, i) => {
+      const detail = l.quantite && l.prixUnitaire ? ` (${l.quantite}${l.unite ? ' ' + l.unite : ''} × ${fmt(l.prixUnitaire, d.devise)})` : '';
+      if (prixOk(l.prix) !== null) { champsPrix[i] = null; return el('tr', {}, el('td', { texte: l.libelle + detail }), el('td', { texte: fmt(l.prix, d.devise) })); }
+      const c = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': 'Prix de la ligne ' + (i + 1), placeholder: 'prix à fixer' });
+      c.addEventListener('input', () => majTotal()); champsPrix[i] = c;
+      return el('tr', {}, el('td', { texte: l.libelle + detail }), el('td', { class: 'prix-manquant' }, c));
+    });
+    const taux = typeof d.tauxTva === 'number' && d.tauxTva > 0 && d.tauxTva <= 0.5 ? d.tauxTva : 0;
+    majTotal = () => {
+      let cts = 0, complet = lignes.length > 0;
+      lignes.forEach((l, i) => { const v = champsPrix[i] ? prixOk(champsPrix[i].value) : prixOk(l.prix); if (v === null) complet = false; else cts += Math.round(v * 100); });
+      celTotal.textContent = complet ? fmt(cts / 100, d.devise) : 'incomplet : prix à fixer';
+      const tva = Math.round(cts * taux); celTva.textContent = complet ? fmt(tva / 100, d.devise) : ''; celTtc.textContent = complet ? fmt((cts + tva) / 100, d.devise) : '';
+      bValider.disabled = !complet;
+    };
+    const pied = taux > 0 ? [el('tr', {}, el('th', { texte: 'Total HT' }), celTotal), el('tr', {}, el('th', { texte: `TVA ${Math.round(taux * 10000) / 100} %` }), celTva), el('tr', {}, el('th', { texte: 'Total TTC' }), celTtc)]
+      : [el('tr', {}, el('th', { texte: 'Total' }), celTotal)];
+    f.append(el('table', { class: 'devis' }, ...trs, ...pied), el('p', { class: 'muet petit', texte: 'Montants calculés par le tableau de bord depuis ta grille de prix (pas par Claude).' }));
+    const pts = d.points_a_confirmer;
+    if (pts && pts.length) f.append(el('div', { class: 'points' }, el('strong', { texte: "À confirmer avant d'envoyer" }), el('ul', {}, ...pts.map((p) => el('li', { texte: String(p) })))));
+  }
+  const zone = el('div', {});
+  const montrer = () => zone.replaceChildren(champTexte('À', mail.a + " (adresse du mail d'origine)"), champTexte('Objet', mail.objet), el('div', { class: 'corps', texte: mail.corps || '' }));
+  montrer(); f.append(zone);
+  let objet, corps, edition = false;
+  const bModif = el('button', { texte: 'Modifier' }), bRefus = el('button', { class: 'danger', texte: 'Refuser' });
+  const modifs = () => {
+    const m = edition ? { objet: objet.value, corps: corps.value } : {};
+    if (champsPrix.some(Boolean)) m.prix = champsPrix.map((c) => (c ? c.value : undefined));
+    return Object.keys(m).length ? m : null;
+  };
+  bModif.addEventListener('click', () => {
+    edition = !edition;
+    if (edition) {
+      objet = el('input', { type: 'text', 'aria-label': 'Objet' }); objet.value = mail.objet || '';
+      corps = el('textarea', { 'aria-label': 'Corps', rows: '8' }); corps.value = mail.corps || '';
+      zone.replaceChildren(champTexte('À', mail.a), el('div', { class: 'champ' }, objet), el('div', { class: 'champ' }, corps));
+      bModif.textContent = 'Annuler la modification';
+    } else { montrer(); bModif.textContent = 'Modifier'; }
+  });
+  bValider.addEventListener('click', async () => { const r = await C.decider(item.fichier, 'valider', modifs()); if (!r.ok) alert(r.erreur); chargerCourrier(); });
+  bRefus.addEventListener('click', async () => { await C.decider(item.fichier, 'refuser', null); chargerCourrier(); });
+  majTotal();
+  f.append(el('div', { class: 'pied' }, bValider, bModif, bRefus, el('span', { class: 'muet', texte: item.fichier })));
+  return f;
+}
+async function chargerValider() {
+  const liste = await C.aValider();
+  if (!Array.isArray(liste)) return;
+  $('cpt-valider').textContent = liste.length ? liste.length + ' brouillon(s)' : '';
+  $('liste-valider').replaceChildren(...(liste.length ? liste.map(ficheBrouillon) : [el('p', { class: 'muet', texte: "Rien à valider pour l'instant." })]));
+}
+async function chargerEnvoi() {
+  const liste = await C.valides();
+  if (!Array.isArray(liste)) return;
+  const zone = $('liste-envoi');
+  $('envoyer-tout').disabled = !liste.some((x) => x.pret);
+  if (!liste.length) { zone.replaceChildren(el('p', { class: 'muet', texte: "Rien n'attend d'être envoyé." })); return; }
+  const classerBtn = (x, texte, decision, classe) => { const b = el('button', { class: classe || '', texte }); b.addEventListener('click', async () => { const r = await C.classer(x.fichier, decision); if (!r.ok) alert(r.erreur); chargerCourrier(); }); return b; };
+  zone.replaceChildren(...liste.map((x) => {
+    const l = el('div', { class: 'fiche' }, el('header', {}, el('h2', { texte: x.objet || x.fichier }), el('span', { class: 'etiquette', texte: x.type || '?' })));
+    l.append(el('div', { class: 'champ', texte: x.destinataire ? 'Sera envoyé à : ' + x.destinataire + " (adresse du mail d'origine)" : 'Destinataire : non déterminé' }));
+    if (x.bloque && x.statut === 'validé, à envoyer') l.append(el('div', { class: 'points' }, el('strong', { texte: x.suspect ? 'Attention : ' : 'Envoi impossible : ' }), x.bloque));
+    if (x.erreurEnvoi && !x.suspect) l.append(el('div', { class: 'champ err-txt', texte: 'Dernier échec : ' + x.erreurEnvoi }));
+    if (x.etatEnvoi === 'envoye') { l.append(el('div', { class: 'points' }, el('strong', { texte: 'Déjà envoyé : ' }), 'il ne sera pas renvoyé.'), el('div', { class: 'pied' }, classerBtn(x, 'Classer dans « envoyés »', 'envoye', 'primaire'))); return l; }
+    if (x.etatEnvoi === 'incertain') {
+      const b2 = el('button', { class: 'danger', texte: 'Pas parti : autoriser un nouvel envoi' });
+      b2.addEventListener('click', async () => { if (!confirm("Tu as vérifié dans le dossier « Envoyés » de ta boîte que ce mail n'est PAS parti ?")) return; const r = await C.classer(x.fichier, 'non-envoye'); if (!r.ok) alert(r.erreur); chargerCourrier(); });
+      l.append(el('div', { class: 'points' }, el('strong', { texte: 'Envoi incertain : ' }), 'vérifie le dossier « Envoyés » de ta boîte. Rien ne sera renvoyé automatiquement.'), el('div', { class: 'pied' }, classerBtn(x, "C'est bien parti : classer", 'envoye'), b2));
+      return l;
+    }
+    const bt = el('button', { class: 'primaire', texte: 'Envoyer' }); bt.disabled = !x.pret;
+    bt.addEventListener('click', async () => { bt.disabled = true; afficherResultatEnvoi(await C.envoyer([x.fichier])); chargerCourrier(); });
+    l.append(el('div', { class: 'pied' }, bt));
+    return l;
+  }));
+}
+function afficherResultatEnvoi(r) {
+  if (!r || r.annule) return;
+  if (r.erreur) { alert(r.erreur); return; }
+  alert(['Envoyés : ' + r.envoyes, ...(r.echecs || []).map((e) => 'Échec : ' + e.fichier + ' : ' + e.erreur)].join('\n'));
+}
+if (C) {
+  $('c-fournisseur').addEventListener('change', aideFournisseur);
+  $('c-activer').addEventListener('click', async () => { const r = await C.activer(); if (r.ok) { remplissageFait = false; chargerCourrier(); } else if (!r.annule) msg('c-activer-msg', r.erreur, 'err-txt'); });
+  $('c-desactiver').addEventListener('click', async () => { if (!confirm('Désactiver le courrier ? Plus aucune connexion ni relève automatique. Tes identifiants et tes fichiers restent en place (« Oublier » efface les identifiants).')) return; await C.desactiver(); chargerCourrier(); });
+  $('c-enregistrer').addEventListener('click', async () => {
+    const perso = $('c-fournisseur').value === 'autre';
+    const r = await C.enregistrer({ fournisseur: $('c-fournisseur').value, adresse: $('c-adresse').value, identifiant: $('c-identifiant').value, mdp: $('c-mdp').value,
+      imap: perso ? { hote: $('c-imap-hote').value, port: $('c-imap-port').value, securite: $('c-imap-sec').value } : null,
+      smtp: perso ? { hote: $('c-smtp-hote').value, port: $('c-smtp-port').value, securite: $('c-smtp-sec').value } : null });
+    if (r.ok) $('c-mdp').value = '';
+    msg('c-resultat', r.ok ? 'Enregistré (chiffré). Clique sur « Tester la connexion ».' + (r.avertissements.length ? ' ' + r.avertissements.join(' ') : '') : r.erreur, r.ok ? 'ok-txt' : 'err-txt');
+    chargerCourrier();
+  });
+  $('c-tester').addEventListener('click', async () => { msg('c-resultat', 'Test en cours…'); const r = await C.tester(); msg('c-resultat', r.ok ? r.message : r.erreur, r.ok ? 'ok-txt' : 'err-txt'); chargerCourrier(); });
+  $('c-oublier').addEventListener('click', async () => { if (!confirm('Effacer les identifiants enregistrés ?')) return; await C.oublier(); msg('c-resultat', 'Identifiants effacés.'); chargerCourrier(); });
+  $('c-relever').addEventListener('click', async () => {
+    $('c-relever').disabled = true; $('boite-info').textContent = 'Relève en cours…';
+    const r = await C.relever();
+    msg('c-resultat', r.ok ? `Relève terminée : ${r.nouveaux} nouveau(x) mail(s)` + (r.ignores ? `, ${r.ignores} illisible(s) ignoré(s)` : '') + '.' : r.erreur, r.ok ? 'ok-txt' : 'err-txt');
+    chargerCourrier();
+  });
+  for (const [id, type] of [['recap-mails', 'mails'], ['recap-devis', 'devis']]) $(id).addEventListener('click', async () => { const r = await C.recapLancer(type); if (!r.ok) msg('recap-etat', r.erreur, 'err-txt'); else chargerCourrier(); });
+  $('recap-copier').addEventListener('click', async () => { const r = await C.copierRecap(typeRecap); $('recap-retour').textContent = r.ok ? 'Copié dans le presse-papiers.' : r.erreur; });
+  $('recap-txt').addEventListener('click', async () => { const r = await C.enregistrerRecap(typeRecap); if (!r.annule) $('recap-retour').textContent = r.ok ? 'Enregistré : ' + r.fichier : r.erreur; });
+  $('rafraichir-valider').addEventListener('click', chargerCourrier);
+  $('valider-selection').addEventListener('click', async () => {
+    const noms = [...document.querySelectorAll('#liste-valider input[type=checkbox]:checked')].map((c) => c.dataset.fichier);
+    if (!noms.length || !confirm(`Valider ${noms.length} brouillon(s) ? Ils seront rangés dans « valides » (rien n'est envoyé).`)) return;
+    let refus = 0; for (const n of noms) if (!(await C.decider(n, 'valider', null)).ok) refus++;
+    if (refus) alert(refus + ' brouillon(s) non validé(s) : devis incomplet (prix à fixer).');
+    chargerCourrier();
+  });
+  $('envoyer-tout').addEventListener('click', async () => {
+    const prets = (await C.valides()).filter((x) => x.pret);
+    if (!prets.length) return;
+    $('envoyer-tout').disabled = true; afficherResultatEnvoi(await C.envoyer(prets.map((x) => x.fichier))); chargerCourrier();
+  });
+  C.surMaj(() => { if (!$('courrier').hidden) chargerCourrier(); });
+}
+
 // Retour sur la fenêtre : on relit l'onglet affiché.
 function rafraichirActif() {
   if (!$('taches').hidden) rafraichirTaches();
   else if (!$('histo').hidden) chargerHisto();
   else if (!$('jetons').hidden) chargerJetons();
+  else if (!$('courrier').hidden) chargerCourrier();
 }
 window.addEventListener('focus', rafraichirActif);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) rafraichirActif(); });

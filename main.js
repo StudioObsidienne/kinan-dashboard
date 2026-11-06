@@ -1,6 +1,7 @@
 // Kinan Orchestre (édition publique) : processus principal.
 // Lit les fichiers d'état locaux écrits par les hooks du plugin et les transmet à l'interface.
-// Aucun appel à Claude (0 jeton) et aucune connexion réseau : toute requête http(s)/ws est bloquée (voir bloquerReseau).
+// Par défaut, aucun appel à Claude (0 jeton) et aucune connexion réseau : toute requête http(s)/ws de Chromium est bloquée (voir bloquerReseau).
+// Options désactivées par défaut : vérification des mises à jour (mise-a-jour.js) et courrier (courrier-ipc.js -> courrier.js).
 const { app, BrowserWindow, Menu, screen, Notification, ipcMain, clipboard, session, dialog } = require('electron');
 const config = require('./config');
 const gestion = require('./gestion-ipc');
@@ -73,7 +74,7 @@ function creerFenetre() {
     minHeight: 520,
     backgroundColor: '#14121c',
     title: 'Kinan Orchestre',
-    icon: path.join(__dirname, 'assets', 'icon.png'),
+    icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -134,11 +135,28 @@ app.whenReady().then(() => {
   bloquerReseau();
   // Configuration (lecture seule) : thème, noms et couleurs des agents, sous-titre. Relue à chaque chargement de page.
   ipcMain.on('config:lire', (e) => { e.returnValue = config.charger(true); });
+  // Logo du tableau au mur : fichier local de l'utilisateur (aucun téléchargement de theme.logo : zéro réseau).
+  // PNG, JPEG ou WebP reconnus à leur signature, 2 Mo au plus ; sinon null (motif neutre dessiné par la scène).
+  ipcMain.handle('logo:lire', () => {
+    const SIG = { 'image/png': [0x89, 0x50, 0x4e, 0x47], 'image/jpeg': [0xff, 0xd8, 0xff], 'image/webp': [0x52, 0x49, 0x46, 0x46] };
+    for (const nom of ['logo.png', 'logo.jpg', 'logo.jpeg', 'logo.webp']) {
+      try {
+        const f = path.join(DOSSIER_ETAT, nom);
+        if (!fs.existsSync(f) || fs.statSync(f).size > 2 * 1024 * 1024) continue;
+        const b = fs.readFileSync(f);
+        const type = Object.keys(SIG).find((t) => SIG[t].every((o, i) => b[i] === o) && (t !== 'image/webp' || b.toString('latin1', 8, 12) === 'WEBP'));
+        if (type) return 'data:' + type + ';base64,' + b.toString('base64');
+      } catch { /* fichier suivant */ }
+    }
+    return null;
+  });
   fs.mkdirSync(DOSSIER_ETAT, { recursive: true });
   if (!fs.existsSync(FICHIER_ETAT)) {
     fs.writeFileSync(FICHIER_ETAT, JSON.stringify(ETAT_PAR_DEFAUT, null, 2));
   }
   gestion.enregistrer();
+  // Courrier : option désactivée par défaut. courrier-ipc.js ne charge courrier.js (IMAP/SMTP, Claude Code) qu'après activation explicite.
+  require('./courrier-ipc').enregistrer();
   require('./economies').enregistrer(ipcMain); // coche verte : rapport des 3 dernières heures (0 jeton)
   require('./ui-ipc').enregistrer({ gestion, son });
   // Clone déployé (un exemplaire de plus, à partir de 2) : notification système ; le petit son est joué par son-ipc.js.
@@ -178,12 +196,29 @@ app.whenReady().then(() => {
   require('./limites').enregistrer({ ipcMain, BrowserWindow, dossierEtat: DOSSIER_ETAT });
   // Version et mises à jour : DÉSACTIVÉ par défaut (zéro réseau). Activé seulement par « miseAJour.verifier: true » dans kinan.config.json ;
   // le module réseau n'est alors chargé qu'à ce moment. Sinon : version locale seule, aucune requête, aucun git.
-  if (config.charger().miseAJour.verifier === true) require('./mise-a-jour').demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEtat: DOSSIER_ETAT, dossierAppli: __dirname, active: true });
-  else {
+  const lancerMaj = () => { if (config.charger(true).miseAJour.verifier !== true) return false; ['maj:lire', 'maj:appliquer', 'maj:vu'].forEach((c) => ipcMain.removeHandler(c)); if (config.charger().miseAJour.verifier === true) require('./mise-a-jour').demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEtat: DOSSIER_ETAT, dossierAppli: __dirname, active: true }); return true; };
+  if (!lancerMaj()) {
     let v = '0.0.0'; try { v = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || v; } catch { /* ignoré */ }
-    const etatMaj = { active: false, verifie: null, appli: { locale: v, distante: null, nouvelle: false }, plugin: { locale: null, distante: null, nouvelle: false }, git: { possible: false, raison: 'vérification désactivée' } };
+    const etatMaj = { active: false, verifie: null, appli: { locale: v, distante: null, nouvelle: false }, plugin: { locale: null, distante: null, nouvelle: false }, git: { possible: false, raison: 'vérification désactivée' }, aAnnoncer: [] };
     ipcMain.handle('maj:lire', () => etatMaj);
     ipcMain.handle('maj:appliquer', () => ({ ok: false, message: 'Vérification des mises à jour désactivée (voir README).' }));
+    ipcMain.handle('maj:vu', () => false);
+  }
+  // Premier lancement, réglage absent de kinan.config.json : une seule question. Aucune requête avant un « Oui ».
+  // La réponse (Oui ou Non) est écrite dans kinan.config.json (miseAJour.verifier) et la question n'est plus posée.
+  if (!config.charger().miseAJour.explicite) {
+    setTimeout(async () => {
+      const w = fenetrePrincipale;
+      const options = { type: 'question', buttons: ['Oui', 'Non'], defaultId: 1, cancelId: 1, noLink: true, title: 'Mises à jour',
+        message: 'Vérifier automatiquement les nouvelles versions ?',
+        detail: 'Une requête vers raw.githubusercontent.com toutes les 6 h (lecture du numéro de version publié). Sans « Oui », aucune connexion.\nModifiable ensuite dans kinan.config.json : « miseAJour.verifier ».' };
+      try {
+        const rep = await (w && !w.isDestroyed() ? dialog.showMessageBox(w, options) : dialog.showMessageBox(options));
+        const oui = rep.response === 0;
+        config.memoriserMiseAJour(oui);
+        if (oui) lancerMaj();
+      } catch { /* question reposée au prochain lancement */ }
+    }, 1500);
   }
   // REFAIRE CONVERSATION : conversation la plus récente trop longue (toutes les 60 s, cache par chemin+taille+mtime).
   const cacheRelais = new Map();

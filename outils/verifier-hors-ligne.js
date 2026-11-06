@@ -35,17 +35,24 @@ const INTERDITS = [
   [/\bRTCPeerConnection\b/, 'WebRTC'],
   [/<(?:script|link|img|iframe|audio|video|source)\b[^>]*\b(?:src|href)\s*=\s*["']?(?:https?:)?\/\//i, 'ressource distante dans une page'],
   [/url\(\s*["']?(?:https?:)?\/\//i, 'ressource distante dans une feuille de style'],
-  [/@import\b/, '@import CSS']
+  [/@import\b/, '@import CSS'],
+  [/require\(\s*['"](?:imapflow|nodemailer|mailparser)['"]\s*\)/, 'bibliothèque de messagerie']
 ];
 
 // Exceptions déclarées : chaque fichier n'a droit qu'aux motifs listés, avec des contrôles supplémentaires (plus bas).
 // - mise-a-jour.js : vérification des mises à jour (raw.githubusercontent.com) et « git pull --ff-only » ; DÉSACTIVÉE par défaut,
-//   chargée par main.js seulement si kinan.config.json contient « miseAJour.verifier: true ».
+//   chargée par main.js seulement si kinan.config.json contient « miseAJour.verifier: true » (écrit par l'utilisateur ou par sa réponse
+//   « Oui » à l'unique question du premier lancement ; « Non » par défaut, aucune requête avant la réponse).
 // - outils/statusline-limites.js : lancé par Claude Code (status line), jamais par l'appli ; processus seulement pour chaîner une status line existante.
+// - courrier.js : option courrier (IMAP/SMTP vers les serveurs choisis par l'utilisateur, récaps par « claude -p ») ; DÉSACTIVÉE par défaut,
+//   chargée seulement par courrier-ipc.js, et seulement si courrier-option.json contient « actif: true » (bouton « Activer » + confirmation).
+// - test/ : tests avec faux serveurs injectés, jamais chargés par l'appli.
 const EXCEPTIONS = {
   'mise-a-jour.js': ['module réseau', 'processus externe'],
-  'outils/statusline-limites.js': ['processus externe']
+  'outils/statusline-limites.js': ['processus externe'],
+  'courrier.js': ['processus externe', 'bibliothèque de messagerie']
 };
+const DEPS_COURRIER = ['imapflow', 'mailparser', 'nodemailer'];
 const erreurs = [];
 const acces = [];
 const liste = fichiers(RACINE);
@@ -87,11 +94,45 @@ try {
 for (const l of main.split(/\r?\n/)) {
   if (/require\(\s*['"]\.\/mise-a-jour['"]\s*\)/.test(l) && !/miseAJour\.verifier === true/.test(l)) erreurs.push('main.js : mise-a-jour.js chargé sans la condition « miseAJour.verifier === true »');
 }
-if (!/u\.miseAJour\.verifier === true/.test(fs.readFileSync(path.join(RACINE, 'config.js'), 'utf8'))) erreurs.push('config.js : la vérification des mises à jour doit être désactivée par défaut');
-// Dépendances : aucune dépendance d'exécution (seul Electron, en développement).
+const cfgTxt = fs.readFileSync(path.join(RACINE, 'config.js'), 'utf8');
+if (!/u\.miseAJour\.verifier === true/.test(cfgTxt)) erreurs.push('config.js : la vérification des mises à jour doit être désactivée par défaut');
+// Question du premier lancement : posée seulement si le réglage est absent, annonce l'origine et la fréquence, « Non » par défaut,
+// et la réponse n'écrit que la clé miseAJour.verifier de kinan.config.json.
+if (!/if \(!config\.charger\(\)\.miseAJour\.explicite\)/.test(main)) erreurs.push('main.js : question des mises à jour posée sans contrôle du réglage existant');
+if (!/raw\.githubusercontent\.com toutes les 6 h/.test(main)) erreurs.push('main.js : la question des mises à jour doit nommer l\'origine et la fréquence');
+if (!/buttons: \['Oui', 'Non'\], defaultId: 1, cancelId: 1/.test(main)) erreurs.push('main.js : la question des mises à jour doit avoir « Non » par défaut');
+if (!/u\.miseAJour = \{ \.\.\.m, verifier: oui === true \};/.test(cfgTxt)) erreurs.push('config.js : la réponse doit n\'écrire que miseAJour.verifier');
+// Courrier : chargement conditionnel, hôtes venant seulement de fournisseurs.js ou de la saisie validée, un seul processus (claude), envoi confirmé.
+const lire = (r) => { try { return fs.readFileSync(path.join(RACINE, r), 'utf8'); } catch { return null; } };
+const cour = lire('courrier.js'), courIpc = lire('courrier-ipc.js'), fourn = lire('fournisseurs.js');
+if (cour !== null) {
+  if (/:\/\//.test(cour)) erreurs.push('courrier.js : URL en dur inattendue');
+  const hotes = cour.match(/\bhost:\s*[^,}]+/g) || [];
+  if (!hotes.length || hotes.some((h) => !/^host:\s*srv\.hote$/.test(h.trim()))) erreurs.push('courrier.js : hôte de connexion qui ne vient pas des serveurs validés (srv.hote)');
+  if (!/rejectUnauthorized: true/.test(cour) || /rejectUnauthorized:\s*false/.test(cour)) erreurs.push('courrier.js : vérification des certificats TLS absente ou désactivée');
+  if ((cour.match(/lancerProcessus\(/g) || []).length !== 1 || !/lancerProcessus\(claudeBin, argsRecap\(type\), \{[^}]*shell: false/.test(cour)) erreurs.push('courrier.js : processus autre que « claude » sans shell');
+  if (!/options\.confirme !== true/.test(cour)) erreurs.push('courrier.js : envoi sans contrôle de confirmation explicite');
+  if (!/'--tools', 'Read,Glob,Grep'/.test(cour)) erreurs.push('courrier.js : outils des agents non limités à Read, Glob, Grep');
+  if (!courIpc) erreurs.push('courrier-ipc.js absent alors que courrier.js existe');
+}
+if (fourn !== null) {
+  if (/require\(/.test(fourn) || /:\/\//.test(fourn)) erreurs.push('fournisseurs.js : doit rester sans require ni URL');
+}
+if (courIpc !== null) {
+  if (!/\.actif === true; \} catch \{ return false; \}/.test(courIpc)) erreurs.push('courrier-ipc.js : l\'option courrier doit être désactivée par défaut');
+  for (const l of courIpc.split(/\r?\n/)) if (/require\(\s*['"]\.\/courrier['"]\s*\)/.test(l) && !/if \(!moteur && estActive\(\)\) moteur = require\(/.test(l)) erreurs.push('courrier-ipc.js : courrier.js chargé sans la condition « estActive() »');
+}
+for (const f of liste) {
+  const rel = path.relative(RACINE, f).replace(/\\/g, '/');
+  if (rel === 'courrier-ipc.js' || rel.startsWith('test/')) continue;
+  if (/require\(\s*['"]\.{1,2}\/(?:[\w-]+\/)*courrier['"]\s*\)/.test(fs.readFileSync(f, 'utf8'))) erreurs.push(`${rel} : courrier.js chargé hors de courrier-ipc.js`);
+}
+// Dépendances d'exécution : uniquement les bibliothèques de messagerie, versions exactes, utilisées par courrier.js seul.
 const pkg = JSON.parse(fs.readFileSync(path.join(RACINE, 'package.json'), 'utf8'));
 const dep = Object.keys(pkg.dependencies || {});
-if (dep.length) erreurs.push('package.json : dépendances d\'exécution inattendues : ' + dep.join(', '));
+const inattendues = dep.filter((d) => !DEPS_COURRIER.includes(d));
+if (inattendues.length) erreurs.push('package.json : dépendances d\'exécution inattendues : ' + inattendues.join(', '));
+for (const d of dep) if (!/^\d+\.\d+\.\d+$/.test(pkg.dependencies[d])) erreurs.push(`package.json : version non figée pour ${d}`);
 
 console.log(`${liste.length} fichiers analysés.`);
 console.log('\nAccès aux fichiers relevés dans le code (chemins résolus : voir README, section « Fichiers lus et écrits ») :');
@@ -101,5 +142,10 @@ if (erreurs.length) {
   for (const e of erreurs) console.error('  ' + e);
   process.exit(1);
 }
-console.log('\nExceptions déclarées : mise-a-jour.js (vérification des mises à jour, désactivée par défaut, raw.githubusercontent.com seulement) ; outils/statusline-limites.js (lancé par Claude Code, pas par l\'appli).');
-console.log('OK : aucun appel réseau par défaut, aucune ressource distante, CSP stricte dans chaque page, blocage réseau actif dans main.js.');
+console.log('\nExceptions déclarées : mise-a-jour.js (vérification des mises à jour, désactivée par défaut, raw.githubusercontent.com seulement) ; outils/statusline-limites.js (lancé par Claude Code, pas par l\'appli) ;');
+console.log('  courrier.js (option courrier, désactivée par défaut : serveurs IMAP/SMTP choisis par l\'utilisateur, « claude -p » pour les récaps).');
+if (fourn !== null) {
+  const h = [...new Set(fourn.match(/'[a-z0-9.-]+\.(?:eu|com|net)'/g) || [])].map((x) => x.slice(1, -1));
+  console.log('  Serveurs prédéfinis du courrier : ' + h.join(', ') + ' ; plus les serveurs saisis par l\'utilisateur (« Autre »).');
+}
+console.log('OK : aucun appel réseau par défaut, aucune ressource distante, CSP stricte dans chaque page, blocage réseau actif dans main.js, options réseau conditionnées.');

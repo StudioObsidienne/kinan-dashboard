@@ -145,6 +145,74 @@
   }
   let mom = moment(heure());
 
+  // ---- Tableau au mur : logo de l'utilisateur en pixel art (32 x 24 unités) ----
+  let logoPix = null;
+  function motifNeutre(x, y) {
+    r(x, y, 32, 24, '#3d5878'); r(x, y + 8, 32, 6, '#55779a'); r(x, y + 12, 32, 4, '#7a98b4');
+    ovale(x + 23, y + 7, 3, 3, '#f1dc8a');
+    for (let i = 0; i < 32; i++) {
+      const h1 = Math.max(0, 9 - Math.abs(i - 10)), h2 = Math.max(0, 7 - (Math.abs(i - 22) * 0.8 | 0));
+      if (h2) r(x + i, y + 24 - 4 - h2, 1, h2 + 4, '#47607a');
+      if (h1) r(x + i, y + 24 - 3 - h1, 1, h1 + 3, '#2f455c');
+      if (h1 > 6) px(x + i, y + 24 - 3 - h1, '#e4ecf4'); // neige
+    }
+    r(x, y + 21, 32, 3, '#3f5e45');
+  }
+  // Pixelisation : réduction par moitiés successives (moyenne propre), transparence tout ou rien, palette de 12 couleurs au plus
+  // (k-moyennes), contour d'un pixel si le logo est détouré, passe-partout clair si le logo est sombre. Image absente ou invalide : null.
+  function pixeliser(img) {
+    const LW = 32, LH = 24, M = 2, iw = img.naturalWidth, ih = img.naturalHeight;
+    if (!iw || !ih || iw > 8192 || ih > 8192) return null;
+    const s = Math.min((LW - 2 * M) / iw, (LH - 2 * M) / ih);
+    const w = Math.max(1, Math.round(iw * s)), h = Math.max(1, Math.round(ih * s));
+    let src = img, sw = iw, sh = ih;
+    while (sw / 2 >= w * 2 && sh / 2 >= h * 2) {
+      const c = document.createElement('canvas'); c.width = Math.ceil(sw / 2); c.height = Math.ceil(sh / 2);
+      const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, c.width, c.height);
+      src = c; sw = c.width; sh = c.height;
+    }
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h), p = d.data, pts = [];
+    for (let i = 0; i < p.length; i += 4) if (p[i + 3] >= 128) pts.push(i);
+    if (pts.length < 4) return null;
+    const lumi = (i) => 0.2126 * p[i] + 0.7152 * p[i + 1] + 0.0722 * p[i + 2];
+    const tri = pts.slice().sort((a, b) => lumi(a) - lumi(b));
+    const nK = Math.min(12, pts.length);
+    let centres = Array.from({ length: nK }, (_, k) => { const i = tri[Math.floor((k + 0.5) * tri.length / nK)]; return [p[i], p[i + 1], p[i + 2]]; });
+    const proche = (i) => { let m = 0, dm = Infinity; centres.forEach((cc, k) => { const dd = (p[i] - cc[0]) ** 2 + (p[i + 1] - cc[1]) ** 2 + (p[i + 2] - cc[2]) ** 2; if (dd < dm) { dm = dd; m = k; } }); return m; };
+    for (let it = 0; it < 6; it++) {
+      const som = centres.map(() => [0, 0, 0, 0]);
+      for (const i of pts) { const s4 = som[proche(i)]; s4[0] += p[i]; s4[1] += p[i + 1]; s4[2] += p[i + 2]; s4[3]++; }
+      centres = centres.map((cc, k) => (som[k][3] ? [som[k][0] / som[k][3], som[k][1] / som[k][3], som[k][2] / som[k][3]] : cc));
+    }
+    let detoure = false, lumMoy = 0;
+    for (let i = 0; i < p.length; i += 4) {
+      if (p[i + 3] < 128) { p[i + 3] = 0; detoure = true; continue; }
+      const cc = centres[proche(i)]; p[i] = cc[0]; p[i + 1] = cc[1]; p[i + 2] = cc[2]; p[i + 3] = 255; lumMoy += lumi(i) / 255;
+    }
+    lumMoy /= pts.length;
+    const fondC = detoure && lumMoy < 0.35 ? '#e9e3d6' : '#251d38';
+    const out = document.createElement('canvas'); out.width = LW; out.height = LH;
+    const o = out.getContext('2d'), ox = Math.floor((LW - w) / 2), oy = Math.floor((LH - h) / 2);
+    x.putImageData(d, 0, 0);
+    if (detoure) { // contour : chaque pixel transparent voisin d'un pixel plein
+      o.fillStyle = fondC === '#251d38' ? '#0e0a16' : '#8a8070';
+      const plein = (i, j) => i >= 0 && j >= 0 && i < w && j < h && p[(j * w + i) * 4 + 3] === 255;
+      for (let j = -1; j <= h; j++) for (let i = -1; i <= w; i++) if (!plein(i, j) && (plein(i - 1, j) || plein(i + 1, j) || plein(i, j - 1) || plein(i, j + 1))) o.fillRect(ox + i, oy + j, 1, 1);
+    }
+    o.drawImage(c, ox, oy);
+    return { toile: out, fond: fondC };
+  }
+  try {
+    if (window.kinan && window.kinan.logo) window.kinan.logo().then((url) => {
+      if (!url) return;
+      const im = new Image();
+      im.onload = () => { try { logoPix = pixeliser(im); if (logoPix) { decor(); sale = true; } } catch { logoPix = null; } };
+      im.src = url;
+    }).catch(() => {});
+  } catch { /* motif neutre */ }
+
   function decor() {
     g = fond.getContext('2d');
     g.setTransform(1, 0, 0, 1, 0, DY);
@@ -194,15 +262,9 @@
     // Petit cactus sur le rebord
     blocs([[30, 52, 4, 7]], '#5fae6b', '#1f3a2c'); r(29, 54, 2, 2, '#5fae6b'); px(31, 53, '#a8e0a0');
     blocs([[28, 57, 8, 2]], '#c4683f'); px(32, 51, '#ff9fb2');
-    // Tableau : gemme
+    // Tableau : logo de l'utilisateur pixelisé (logo.png du dossier d'état, voir README), sinon motif neutre (paysage).
     r(129, 15, 40, 32, K); r(130, 16, 38, 30, '#c9a46a'); r(131, 17, 36, 1, '#e3c58a');
-    r(133, 19, 32, 24, '#251d38');
-    const gem = [[4, 0], [10, 1], [14, 2], [16, 3], [14, 4], [12, 5], [10, 6], [8, 7], [6, 8], [4, 9], [2, 10]];
-    gem.forEach(([w, j], i) => {
-      const y = 24 + i * 1.5 | 0, x = 149 - w / 2;
-      r(x, y, w, 2, '#4a3a7a'); r(x, y, Math.ceil(w / 3), 2, '#8e78d0'); r(x + w - Math.ceil(w / 4), y, Math.ceil(w / 4), 2, '#2b2150');
-    });
-    px(145, 25, '#e6dcff'); px(146, 26, '#e6dcff');
+    if (logoPix) { r(133, 19, 32, 24, logoPix.fond); g.drawImage(logoPix.toile, 133, 19); } else motifNeutre(133, 19);
     // Horloge (cadran fixe, aiguilles dynamiques)
     ovale(200, 32, 14, 14, K); ovale(200, 32, 13, 13, '#8a6446'); ovale(200, 32, 11, 11, '#f6eedb');
     ovale(200, 33, 11, 11, '#f6eedb'); ovale(201, 33, 10, 10, '#f6eedb');
@@ -225,8 +287,8 @@
       r(x, 30 - h, w, h, c); r(x, 30 - h, 1, h, '#ffffff22'); r(x, 33 - h, w, 1, '#00000030');
       x += w + (i === 6 ? 6 : 0);
     }
-    // gemme trophée + livres couchés en bas
-    blocs([[300, 53, 8, 5]], '#3a2e5a'); r(301, 49, 6, 4, '#7a63c0'); px(302, 50, '#e6dcff'); r(299, 57, 10, 1, OR);
+    // petite coupe dorée + livres couchés en bas
+    blocs([[300, 49, 8, 4]], OR); px(301, 50, OR_C); r(303, 53, 2, 2, OR_O); blocs([[301, 55, 6, 2]], '#6b4a35'); r(299, 57, 10, 1, OR);
     r(316, 52, 22, 3, '#4f7fd8'); r(318, 49, 18, 3, '#f2c14e'); r(317, 55, 20, 3, '#d6455d');
     x = 346;
     for (let i = 0; i < 6; i++) { const w = 3 + (alea(i + 30) * 2 | 0), h = 13 + (alea(i + 40) * 6 | 0); r(x, 58 - h, w, h, livres[(i + 3) % 7]); r(x, 58 - h, 1, h, '#ffffff22'); x += w; }
@@ -442,10 +504,10 @@
       glyphe(G.inter, sx + 7.5, sy + 3, '#ffd166');
       lueurs.push([mx - 0.5, y - 10, 16, '#ffd166', 0.09]);
     } else {
-      // écran de veille : une petite gemme qui flotte
+      // écran de veille : un petit carré de la couleur de l'agent qui flotte
       const tri = (v) => Math.abs(((v % 2) + 2) % 2 - 1);
       const gx = sx + 1 + (calme ? 8 : tri(t / 4100 + a.phase) * 16), gy = sy + 1 + (calme ? 4 : tri(t / 2900 + a.phase) * 8);
-      r(gx + 1, gy, 1, 1, '#6e5aa8'); r(gx, gy + 1, 3, 1, '#4a3a7a'); px(gx + 1, gy + 2, '#4a3a7a');
+      g.globalAlpha = 0.55; r(gx, gy, 2, 2, a.ligne); g.globalAlpha = 1;
     }
     r(sx, sy, 20, 1, '#ffffff14');
   }
@@ -628,9 +690,13 @@
     const apparition = calme ? 1 : lisse(borne(dt / 260));
     const x = a.cx + 3, montee = Math.round((1 - apparition) * 3);
     if (type === 'zzz') {
+      // Trajet en 16 pas entiers réguliers (un pas = 1 pixel vers le haut, x lié au même pas) : x et y bougent ensemble,
+      // sans oscillation d'aller-retour. Avant, x, y et une sinusoïde arrondis séparément donnaient des sauts décalés (effet saccadé).
+      const PAS_Z = 16, CYCLE_Z = 2720; // 170 ms par pas
       for (let i = 0; i < 3; i++) {
-        const ph = calme ? 0.15 + i * 0.3 : ((t / 2600) + i / 3) % 1;
-        const zx = x + 3 + ph * 10 + (calme ? 0 : Math.sin(ph * 7) * 1.2), zy = sommet - 3 - ph * 16;
+        const n = calme ? Math.round((0.15 + i * 0.3) * PAS_Z) : Math.floor(((t / CYCLE_Z) + i / 3) % 1 * PAS_Z);
+        const ph = n / PAS_Z;
+        const zx = x + 3 + Math.round(n * 10 / PAS_Z), zy = sommet - 3 - n;
         g.globalAlpha = calme ? 0.85 : Math.min(1, (1 - ph) * 1.6) * apparition;
         const mo = ph < 0.33 ? G.z3 : ph < 0.66 ? G.z4 : G.z5;
         glyphe(mo, zx + 1, zy + 1, '#1d172980');
@@ -1096,13 +1162,16 @@
   }
   setInterval(minute, 15000);
 
-  // Logo : petite gemme
+  // Logo de l'en-tête : Kinan le juge, même dessin que l'icône de l'appli (outils/faire-logo.js)
   (() => {
     const c = document.getElementById('logo').getContext('2d');
     const ancien = g; g = c;
-    const lignes = ['.....####.....', '...##hhh##....', '..#hhmmmdd#...', '.#hmmmmmddd#..', '#hmmmmmmdddd#.', '.#mmmmmmddd#..', '..#mmmmmdd#...', '...#mmmdd#....', '....#mmd#.....', '.....#d#......', '......#.......'];
-    const col = { '#': K, h: '#c9b8ff', m: '#7a63c0', d: '#3a2e5a' };
-    lignes.forEach((l, j) => { for (let i = 0; i < l.length; i++) if (col[l[i]]) px(i + 1, j + 2, col[l[i]]); });
+    r(0, 1, 16, 14, '#2a2540'); r(1, 0, 14, 16, '#2a2540');
+    r(4, 2, 8, 5, '#f4f1ea'); r(3, 4, 1, 5, '#f4f1ea'); r(12, 4, 1, 5, '#f4f1ea');
+    r(5, 4, 6, 5, '#d9a98b');
+    r(6, 6, 1, 1, '#1a1620'); r(9, 6, 1, 1, '#1a1620'); r(7, 8, 2, 1, '#a05a4a');
+    r(3, 10, 10, 5, '#15151d'); r(7, 10, 2, 3, '#ffffff');
+    r(11, 11, 3, 2, '#ffd45e'); r(12, 13, 1, 2, '#8a5a2b');
     g = ancien;
   })();
 
@@ -1110,14 +1179,21 @@
   minute();
 
   // ================= BOUCLE =================
-  let derniere = -1e9;
+  // Cadence visée : 30 i/s (1 i/s en mouvement réduit). Tolérance de 5 ms : avec un seuil strict (« < 33 » et derniere = t),
+  // la moindre gigue des horodatages (écran 60 Hz, minuterie Windows de 15,6 ms, image retardée) sautait une image sur deux
+  // et alternait 33/50 ms : animation saccadée. Fenêtre masquée ou réduite : boucle arrêtée, relancée au retour.
+  let derniere = -1e9, idBoucle = 0;
   function boucle(t) {
-    requestAnimationFrame(boucle);
-    const pas = calme ? 1000 : 33; // ~30 i/s ; 1 i/s en mouvement réduit
-    if (!sale && t - derniere < pas) return;
+    idBoucle = requestAnimationFrame(boucle);
+    const pas = calme ? 1000 : 1000 / 30;
+    if (!sale && t - derniere < pas - 5) return;
     derniere = t; sale = false;
     dessiner(t);
   }
+  document.addEventListener('visibilitychange', () => {
+    cancelAnimationFrame(idBoucle); idBoucle = 0;
+    if (!document.hidden) { sale = true; idBoucle = requestAnimationFrame(boucle); }
+  });
   dessiner(performance.now());
-  requestAnimationFrame(boucle);
+  idBoucle = requestAnimationFrame(boucle);
 })();

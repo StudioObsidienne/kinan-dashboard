@@ -74,7 +74,7 @@ function ouvrirAgent(cle, cacher = false) {
   }
   fenetre = new BrowserWindow({
     width: 360, height: 300, resizable: false, show: !cacher, backgroundColor: '#14121c', title: 'Kinan Orchestre : agent',
-    icon: path.join(__dirname, 'assets', 'icon.png'), autoHideMenuBar: true, alwaysOnTop: true,
+    icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'), autoHideMenuBar: true, alwaysOnTop: true,
     webPreferences: { preload: path.join(__dirname, 'preload-agent.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
   fenetre.loadFile(path.join(__dirname, 'src', 'agent.html'));

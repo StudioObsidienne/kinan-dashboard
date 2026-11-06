@@ -18,13 +18,33 @@
     const aJour = etat.active && !!etat.verifie && !nouv.length;
     verTxt.textContent = 'v' + etat.appli.locale;
     ver.classList.toggle('a-jour', aJour);
-    ver.title = !etat.active ? 'Version installée. Vérification des mises à jour désactivée.'
+    ver.title = !etat.active ? 'Version installée · vérification désactivée (kinan.config.json : miseAJour.verifier)'
       : !etat.verifie ? 'Version installée. Pas encore vérifiée (hors ligne ?).'
         : (aJour ? 'À jour' : 'Mise à jour disponible') + ' (vérifié le ' + dateCourte(etat.verifie) + ')';
     ver.setAttribute('aria-label', 'Version ' + etat.appli.locale + (aJour ? ', à jour' : ''));
     ver.hidden = false;
     pastille.hidden = !nouv.length;
     if (carte.open) remplir();
+    annoncer();
+  }
+
+  // Pop-up « Nouvelle mise à jour » : seulement si la vérification est active et pour une version jamais annoncée
+  // (le processus principal tient la liste « aAnnoncer » et mémorise l'annonce dès l'affichage : une seule fois par version).
+  const popup = $('maj-popup'), popupCorps = $('maj-popup-corps'), popupGo = $('maj-popup-go'), popupTard = $('maj-popup-tard');
+  function annoncer() {
+    if (!popup || !etat.active || !Array.isArray(etat.aAnnoncer) || !etat.aAnnoncer.length || !popup.hidden) return;
+    popupCorps.replaceChildren(...etat.aAnnoncer.map((k) => el('p', (k === 'appli' ? 'Appli' : 'Plugin kinan-orchestre') + ' : v' + etat[k].locale + ' → v' + etat[k].distante)));
+    popup.hidden = false;
+    if (api.majVu) api.majVu().catch(() => {});
+  }
+  if (popup) {
+    popupTard.addEventListener('click', () => { popup.hidden = true; });
+    // « Mettre à jour » : appli -> flux git existant (confirmation, git pull --ff-only) ; plugin -> étapes /plugin dans la carte.
+    popupGo.addEventListener('click', () => {
+      popup.hidden = true;
+      msg.textContent = ''; remplir(); carte.showModal();
+      if (etat.appli.nouvelle && etat.git && etat.git.possible) go.click();
+    });
   }
 
   function remplir() {
@@ -47,8 +67,9 @@
       if (etat.git && !etat.git.possible && etat.git.raison) corps.append(el('p', 'Mise à jour automatique impossible : ' + etat.git.raison + '.'));
     }
     if (p && p.nouvelle) {
-      const ol = el('ol'); const l1 = el('li'); l1.append('Dans le dossier du plugin : ', code('git pull'), ' (ou mets-le à jour depuis ', code('/plugin'), ').');
-      ol.append(l1, el('li', 'Relance Claude Code.'));
+      const ol = el('ol'); const l1 = el('li'); l1.append('Dans Claude Code, tape ', code('/plugin'), ', choisis kinan-orchestre et mets-le à jour.');
+      const l2 = el('li'); l2.append('Plugin installé par git : ', code('git pull'), ' dans son dossier.');
+      ol.append(l1, l2, el('li', 'Relance Claude Code.'));
       corps.append(el('p', 'Mettre à jour le plugin :'), ol);
     }
     go.hidden = !(a.nouvelle && etat.git && etat.git.possible);

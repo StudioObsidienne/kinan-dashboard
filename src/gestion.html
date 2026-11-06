@@ -13,6 +13,7 @@
     <button role="tab" data-onglet="taches" aria-selected="true">Tâches</button>
     <button role="tab" data-onglet="histo" aria-selected="false">Historique</button>
     <button role="tab" data-onglet="jetons" aria-selected="false">Jetons</button>
+    <button role="tab" data-onglet="courrier" aria-selected="false">Courrier</button>
   </nav>
 </header>
 <main>
@@ -57,6 +58,67 @@
       <table class="tarifs"><thead><tr><th>Modèle</th><th>Entrée</th><th>Sortie</th><th>Cache écrit</th><th>Cache lu</th></tr></thead><tbody id="tarifs-corps"></tbody></table>
       <label class="champ muet">Taux USD → EUR : <input id="taux-eur" type="number" step="0.01" min="0.01"></label>
       <div class="barre"><button id="tarifs-enreg" class="primaire">Enregistrer</button><button id="tarifs-defaut">Valeurs d'origine</button><span id="tarifs-msg" class="muet"></span></div>
+    </div>
+  </section>
+  <section id="courrier" hidden>
+    <div id="c-off" class="fiche" hidden>
+      <h2>Courrier (option désactivée)</h2>
+      <p>Cette option relève les mails de ta boîte (lecture seule), fait préparer par Claude un récap, des brouillons de réponse et des devis, puis envoie seulement ce que tu valides et confirmes.</p>
+      <ul class="pas">
+        <li>Désactivée, elle n'ouvre aucune connexion et ne charge aucune bibliothèque de messagerie.</li>
+        <li>Activée, le tableau de bord se connecte aux serveurs IMAP et SMTP de la boîte que tu choisis : quand tu cliques sur Tester, Relever ou Envoyer, puis toutes les 30 minutes une fois la connexion vérifiée.</li>
+        <li>Les récaps lancent Claude Code en arrière-plan (ton abonnement ou tes jetons), avec les agents courrier et devis du plugin kinan-orchestre, en lecture seule.</li>
+      </ul>
+      <div class="barre"><button id="c-activer" class="primaire">Activer le courrier</button><span id="c-activer-msg" class="muet"></span></div>
+    </div>
+    <div id="c-on" hidden>
+      <div class="fiche">
+        <h2>Connexion</h2>
+        <p id="etat-conn" class="muet"></p>
+        <div class="grille-form">
+          <label>Fournisseur<select id="c-fournisseur"></select></label>
+          <label>Adresse mail<input id="c-adresse" type="text" autocomplete="off" placeholder="toi@exemple.fr"></label>
+          <label>Mot de passe d'application<input id="c-mdp" type="password" autocomplete="new-password" placeholder="(pas ton mot de passe habituel)"></label>
+        </div>
+        <details id="c-avance"><summary>Identifiant différent de l'adresse (rare)</summary>
+          <div class="grille-form"><label>Identifiant de connexion<input id="c-identifiant" type="text" autocomplete="off" placeholder="vide = l'adresse mail"></label></div>
+        </details>
+        <div id="c-perso" hidden>
+          <div class="grille-form">
+            <label>Serveur de lecture (IMAP)<input id="c-imap-hote" type="text" autocomplete="off" placeholder="imap.exemple.fr"></label>
+            <label>Port IMAP<input id="c-imap-port" type="text" inputmode="numeric" placeholder="993"></label>
+            <label>Sécurité IMAP<select id="c-imap-sec"><option value="ssl">SSL/TLS</option><option value="starttls">STARTTLS</option></select></label>
+            <label>Serveur d'envoi (SMTP)<input id="c-smtp-hote" type="text" autocomplete="off" placeholder="smtp.exemple.fr"></label>
+            <label>Port SMTP<input id="c-smtp-port" type="text" inputmode="numeric" placeholder="465"></label>
+            <label>Sécurité SMTP<select id="c-smtp-sec"><option value="ssl">SSL/TLS</option><option value="starttls">STARTTLS</option></select></label>
+          </div>
+        </div>
+        <p id="c-serveurs" class="muet petit"></p>
+        <div class="points" id="c-aide"></div>
+        <div class="barre"><button id="c-enregistrer" class="primaire">Enregistrer</button><button id="c-tester">Tester la connexion</button><button id="c-oublier" class="danger">Oublier les identifiants</button><button id="c-desactiver">Désactiver le courrier</button></div>
+        <p id="c-resultat" class="muet" role="status"></p>
+      </div>
+      <div class="fiche">
+        <h2>Boîte</h2>
+        <p id="boite-info" class="muet"></p>
+        <div class="barre"><button id="c-relever" class="primaire">Relever les mails maintenant</button></div>
+        <p class="muet">Lecture seule : rien n'est marqué comme lu, supprimé ni déplacé. Premier relevé : 30 derniers jours, 50 mails au plus.</p>
+      </div>
+      <div class="fiche">
+        <h2>Récaps</h2>
+        <div class="barre"><button id="recap-mails">Récap mails</button><button id="recap-devis">Préparer les devis</button><span class="muet">Lance Claude Code en arrière-plan (consomme des jetons). Un seul récap à la fois.</span></div>
+        <p id="grille-info" class="muet petit"></p>
+        <p id="recap-etat" class="muet" role="status"></p>
+        <div class="barre"><button id="recap-copier" hidden>Copier le récap</button><button id="recap-txt" hidden>Enregistrer en .txt</button><span id="recap-retour" class="muet"></span></div>
+        <div id="recap-texte" class="corps recap" hidden></div>
+      </div>
+      <h3 class="sous-titre">À valider</h3>
+      <p class="avertissement">Valider range le brouillon dans « valides » : rien ne part. L'envoi réel se fait seulement avec « Envoyer » plus bas, après une confirmation du système.</p>
+      <div class="barre"><button id="valider-selection">Valider la sélection</button><button id="rafraichir-valider">Actualiser</button><span id="cpt-valider" class="muet"></span></div>
+      <div id="liste-valider"></div>
+      <h3 class="sous-titre">Validés, prêts à envoyer</h3>
+      <div class="barre"><button id="envoyer-tout" class="primaire">Envoyer les validés</button><span class="muet">Le destinataire est recalculé depuis le mail d'origine, jamais lu dans le brouillon.</span></div>
+      <div id="liste-envoi"></div>
     </div>
   </section>
 </main>

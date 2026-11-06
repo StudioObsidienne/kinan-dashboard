@@ -95,7 +95,9 @@ function lire() {
   else if (u.dossierTravail !== undefined && u.dossierTravail !== null) alertes.push('dossierTravail : chemin absolu attendu, ignoré');
   const sons = { actif: !(u.sons && typeof u.sons === 'object' && u.sons.actif === false) };
   // Vérification des mises à jour (réseau : raw.githubusercontent.com, toutes les 6 h) : désactivée sauf « miseAJour.verifier: true ».
-  const miseAJour = { verifier: !!(u.miseAJour && typeof u.miseAJour === 'object' && u.miseAJour.verifier === true) };
+  // « explicite » : true ou false écrit dans le fichier (par l'utilisateur ou par sa réponse à la question du premier lancement).
+  const miseAJour = { verifier: !!(u.miseAJour && typeof u.miseAJour === 'object' && u.miseAJour.verifier === true),
+    explicite: !!(u.miseAJour && typeof u.miseAJour === 'object' && typeof u.miseAJour.verifier === 'boolean') };
   return { dossier: DOSSIER, juge, agents, theme, themeApplique: l.ok, titreBureau, relais, dossierTravail, sons, miseAJour, alertes };
 }
 
@@ -116,4 +118,22 @@ function horsTravail(cwd) {
   return !(c === r || c.startsWith(r + path.sep.toLowerCase()) || c.startsWith(r + '/'));
 }
 
-module.exports = { horsTravail, DOSSIER, F_UTILISATEUR, charger, ids, nomDe, contraste, lisible };
+// Mémorise la réponse à « Vérifier automatiquement les nouvelles versions ? » : seule la clé miseAJour.verifier est écrite,
+// le reste du fichier est conservé tel quel. Fichier présent mais illisible : rien n'est écrit (la question sera reposée).
+function memoriserMiseAJour(oui) {
+  let u = {};
+  try {
+    if (fs.existsSync(F_UTILISATEUR)) u = JSON.parse(fs.readFileSync(F_UTILISATEUR, 'utf8').replace(/^﻿/, ''));
+    if (!u || typeof u !== 'object' || Array.isArray(u)) return false;
+    const m = u.miseAJour && typeof u.miseAJour === 'object' && !Array.isArray(u.miseAJour) ? u.miseAJour : {};
+    u.miseAJour = { ...m, verifier: oui === true };
+    fs.mkdirSync(DOSSIER, { recursive: true });
+    const tmp = F_UTILISATEUR + '.' + process.pid + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(u, null, 2) + '\n');
+    fs.renameSync(tmp, F_UTILISATEUR);
+    charger(true);
+    return true;
+  } catch { return false; }
+}
+
+module.exports = { horsTravail, DOSSIER, F_UTILISATEUR, charger, ids, nomDe, contraste, lisible, memoriserMiseAJour };

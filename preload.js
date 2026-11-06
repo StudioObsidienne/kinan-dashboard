@@ -8,7 +8,9 @@ contextBridge.exposeInMainWorld('kinan', {
   // Ouvre la petite fenêtre de détail d'un agent (clé validée côté main).
   ouvrirAgent: (cle) => ipcRenderer.send('agent:ouvrir', String(cle)),
   // Détail (Fait / En cours / À venir) affiché directement dans la page principale.
-  detailAgent: (cle) => ipcRenderer.invoke('agent:detail', String(cle))
+  detailAgent: (cle) => ipcRenderer.invoke('agent:detail', String(cle)),
+  // Logo de l'utilisateur pour le tableau au mur : fichier local logo.png / .jpg / .webp du dossier d'état (data URL validée) ou null.
+  logo: () => ipcRenderer.invoke('logo:lire')
 });
 
 // Boutons de l'en-tête (Gestion, sons).
@@ -30,6 +32,7 @@ contextBridge.exposeInMainWorld('kinanUI', {
   majLire: () => ipcRenderer.invoke('maj:lire'),
   surMaj: (r) => ipcRenderer.on('maj:maj', (_e, e) => r(e)),
   majAppliquer: () => ipcRenderer.invoke('maj:appliquer'),
+  majVu: () => ipcRenderer.invoke('maj:vu'),
   limitesLire: () => ipcRenderer.invoke('limites:lire'),
   surLimites: (r) => ipcRenderer.on('limites:maj', (_e, e) => r(e))
 });
@@ -45,4 +48,27 @@ contextBridge.exposeInMainWorld('gestion', {
   reglerTarifs: (t) => ipcRenderer.invoke('gestion:tarifs-regler', t),
   tarifsDefaut: () => ipcRenderer.invoke('gestion:tarifs-defaut'),
   reglerContexte: (n) => ipcRenderer.invoke('gestion:reglage-contexte', n)
+});
+
+// Courrier (option désactivée par défaut). Les identifiants peuvent être définis ou effacés, jamais relus par la page.
+const typeRecap = (t) => (t === 'devis' ? 'devis' : 'mails');
+contextBridge.exposeInMainWorld('courrier', {
+  option: () => ipcRenderer.invoke('courrier:option'),
+  activer: () => ipcRenderer.invoke('courrier:activer'),
+  desactiver: () => ipcRenderer.invoke('courrier:desactiver'),
+  statut: () => ipcRenderer.invoke('courrier:statut'),
+  enregistrer: (d) => ipcRenderer.invoke('courrier:enregistrer', d),
+  oublier: () => ipcRenderer.invoke('courrier:oublier'),
+  tester: () => ipcRenderer.invoke('courrier:tester'),
+  relever: () => ipcRenderer.invoke('courrier:relever'),
+  aValider: () => ipcRenderer.invoke('courrier:a-valider'),
+  decider: (f, action, modifs) => ipcRenderer.invoke('courrier:decider', String(f), action === 'valider' ? 'valider' : 'refuser', modifs || null),
+  valides: () => ipcRenderer.invoke('courrier:valides'),
+  envoyer: (fichiers) => ipcRenderer.invoke('courrier:envoyer', Array.isArray(fichiers) ? fichiers.map(String) : []),
+  classer: (f, d) => ipcRenderer.invoke('courrier:classer', String(f), d === 'envoye' ? 'envoye' : 'non-envoye'),
+  copierRecap: (t) => ipcRenderer.invoke('courrier:copier-recap', typeRecap(t)),
+  enregistrerRecap: (t) => ipcRenderer.invoke('courrier:enregistrer-recap', typeRecap(t)),
+  recapLancer: (t) => ipcRenderer.invoke('courrier:recap-lancer', typeRecap(t)),
+  recapEtat: () => ipcRenderer.invoke('courrier:recap-etat'),
+  surMaj: (r) => ipcRenderer.on('courrier:maj', () => r())
 });

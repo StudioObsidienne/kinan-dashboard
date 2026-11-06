@@ -1,0 +1,11 @@
+{
+  "_avertissement": "EXEMPLE FICTIF. Ces libellés et ces prix ne correspondent à aucune offre réelle. Remplacez-les par vos propres prestations et tarifs.",
+  "devise": "EUR",
+  "tauxTva": 0.2,
+  "mentions": ["Exemple de mention (fictive) : remplacez-la par vos mentions légales et conditions de paiement."],
+  "lignes": [
+    { "id": "exemple-a", "libelle": "Prestation A (exemple)", "unite": "pièce", "prixUnitaire": 100 },
+    { "id": "exemple-b", "libelle": "Prestation B (exemple)", "unite": "pièce", "prixUnitaire": 250 },
+    { "id": "exemple-heure", "libelle": "Temps passé (exemple)", "unite": "heure", "prixUnitaire": 50 }
+  ]
+}
