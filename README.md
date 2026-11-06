@@ -11,6 +11,7 @@ The plugin writes the state files; this dashboard only displays them. Without th
 ## Status
 
 - Tested on Windows only. macOS and Linux are untested.
+- Two separate version numbers: the dashboard (this app, shown as "Dashboard" next to the title) and the kinan-orchestre plugin (shown as "Plugin" below it). They are updated separately and do not have to match. The dashboard is updated with `git pull`; the plugin is updated in Claude Code (`claude plugin marketplace update kinan`, then `claude plugin update kinan-orchestre@kinan`, then restart Claude Code).
 - The interface text is in French.
 - Version 0.2.6. Electron 45. Already used by testers on their own computers (first feedback integrated: animation smoothness, taskbar icon, update flow). A next version is in progress.
 - The dashboard displays what the plugin writes. For the judge to work as designed, use **Sonnet 5.5** with **medium** effort in the main Claude chat.

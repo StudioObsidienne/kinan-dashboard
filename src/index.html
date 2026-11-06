@@ -145,6 +145,9 @@
   @media (prefers-reduced-motion: reduce) { .tokenout { animation: none; } }
   /* Version (coche verte si à jour), mise à jour disponible, bulle rouge « limite » */
   .titre-ligne { display: flex; align-items: center; gap: 8px; }
+  .v-lignes { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 1.25; }
+  .v-ligne { display: inline-flex; align-items: center; gap: 3px; }
+  .v-ligne[hidden] { display: none; }
   .version { display: inline-flex; align-items: center; gap: 3px; padding: 0; font-size: 11px; color: var(--pale); background: none; border: 0; cursor: pointer; }
   .version:hover, .version:focus-visible { color: var(--doux); }
   .version[hidden], .pastille-maj[hidden], .bulle-limite[hidden] { display: none; }
@@ -264,7 +267,7 @@
       <div>
         <div class="titre-ligne">
           <h1>Kinan Orchestre</h1>
-          <button type="button" id="version" class="version mono" hidden><span id="version-txt"></span><svg class="v-coche" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg></button>
+          <button type="button" id="version" class="version mono" hidden><span class="v-lignes"><span class="v-ligne"><span id="version-txt"></span> Dashboard<svg class="v-coche" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg></span><span class="v-ligne" id="version-plugin" hidden></span></span></button>
           <button type="button" id="pastille-maj" class="pastille-maj" hidden>mise à jour disponible</button>
         </div>
         <p id="sous-titre">Bureau des agents</p>

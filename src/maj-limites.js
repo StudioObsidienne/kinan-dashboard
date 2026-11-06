@@ -5,7 +5,7 @@
   const api = window.kinanUI;
   if (!api || !api.majLire) return;
   const $ = (id) => document.getElementById(id);
-  const ver = $('version'), verTxt = $('version-txt'), pastille = $('pastille-maj');
+  const ver = $('version'), verTxt = $('version-txt'), verPlugin = $('version-plugin'), pastille = $('pastille-maj');
   const carte = $('maj-carte'), corps = $('maj-corps'), msg = $('maj-msg'), go = $('maj-go'), fermer = $('maj-fermer');
   let etat = null;
   const el = (tag, txt, cls) => { const n = document.createElement(tag); if (txt) n.textContent = txt; if (cls) n.className = cls; return n; };
@@ -18,6 +18,8 @@
     const relancer = !!(etat.appli && etat.appli.aRelancer);
     const aJour = etat.active && !!etat.verifie && !nouv.length;
     verTxt.textContent = 'v' + etat.appli.locale;
+    verPlugin.hidden = !(etat.plugin && etat.plugin.locale);
+    if (!verPlugin.hidden) verPlugin.textContent = 'v' + etat.plugin.locale + ' Plugin';
     ver.classList.toggle('a-jour', aJour);
     ver.title = !etat.active ? 'Version du tableau de bord · vérification désactivée (kinan.config.json : miseAJour.verifier)'
       : !etat.verifie ? 'Version installée. Pas encore vérifiée (hors ligne ?).'
