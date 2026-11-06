@@ -98,7 +98,7 @@ function lire() {
   if (typeof u.dossierTravail === 'string' && u.dossierTravail.length <= 260 && !/[\u0000-\u001f]/.test(u.dossierTravail) && path.isAbsolute(u.dossierTravail)) dossierTravail = path.resolve(u.dossierTravail);
   else if (u.dossierTravail !== undefined && u.dossierTravail !== null) alertes.push('dossierTravail : chemin absolu attendu, ignoré');
   const sons = { actif: !(u.sons && typeof u.sons === 'object' && u.sons.actif === false) };
-  // Vérification des mises à jour (réseau : raw.githubusercontent.com, toutes les 6 h) : désactivée sauf « miseAJour.verifier: true ».
+  // Vérification des mises à jour (réseau : raw.githubusercontent.com, toutes les 30 min) : désactivée sauf « miseAJour.verifier: true ».
   // « explicite » : true ou false écrit dans le fichier (par l'utilisateur ou par sa réponse à la question du premier lancement).
   const miseAJour = { verifier: !!(u.miseAJour && typeof u.miseAJour === 'object' && u.miseAJour.verifier === true),
     explicite: !!(u.miseAJour && typeof u.miseAJour === 'object' && typeof u.miseAJour.verifier === 'boolean') };

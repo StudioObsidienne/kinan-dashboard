@@ -211,7 +211,7 @@ app.whenReady().then(() => {
       const w = fenetrePrincipale;
       const options = { type: 'question', buttons: ['Oui', 'Non'], defaultId: 1, cancelId: 1, noLink: true, title: 'Mises à jour',
         message: 'Vérifier automatiquement les nouvelles versions ?',
-        detail: 'Une requête vers raw.githubusercontent.com toutes les 6 h (lecture du numéro de version publié). Sans « Oui », aucune connexion.\nModifiable ensuite dans kinan.config.json : « miseAJour.verifier ».' };
+        detail: 'Une requête vers raw.githubusercontent.com toutes les 30 min (lecture du numéro de version publié). Sans « Oui », aucune connexion.\nModifiable ensuite dans kinan.config.json : « miseAJour.verifier ».' };
       try {
         const rep = await (w && !w.isDestroyed() ? dialog.showMessageBox(w, options) : dialog.showMessageBox(options));
         const oui = rep.response === 0;

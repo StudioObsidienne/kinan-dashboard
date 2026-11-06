@@ -1,6 +1,6 @@
 // Kinan Orchestre : version de l'appli et du plugin, vérification des mises à jour, mise à jour sûre par git. 0 jeton.
 // Réseau : une seule origine, raw.githubusercontent.com (lecture d'un package.json / plugin.json publics), au démarrage si le cache
-// a plus de 6 h, puis toutes les 6 h. Échec réseau = silence (on garde le cache). Cache : <dossier d'état>/mise-a-jour.json.
+// a plus de 30 min, puis toutes les 30 min. Échec réseau = silence (on garde le cache). Cache : <dossier d'état>/mise-a-jour.json.
 // Mise à jour : seulement si l'appli est la racine d'un dépôt git propre (aucune modification locale) avec une branche suivie ;
 // toujours après confirmation ; uniquement « git pull --ff-only » (jamais de force, jamais de reset).
 'use strict';
@@ -15,7 +15,7 @@ const SOURCES = {
   appli: ['/StudioObsidienne/kinan-dashboard/main/package.json'],
   plugin: ['/StudioObsidienne/kinan-orchestre/main/.claude-plugin/plugin.json', '/StudioObsidienne/kinan-orchestre/main/package.json']
 };
-const PERIODE = 6 * 3600 * 1000;
+const PERIODE = 30 * 60 * 1000;
 const MAX_OCTETS = 64 * 1024;
 
 const lireJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^﻿/, '')); } catch { return null; } };
@@ -195,8 +195,8 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
   if (active) {
     majGit();
     if (!etat.verifie || Date.now() - etat.verifie >= PERIODE) setTimeout(verifier, 5000);
-    // Contrôle toutes les 30 min : nouvelle requête seulement si la dernière vérification a 6 h (robuste à la mise en veille).
-    setInterval(() => { if (!etat.verifie || Date.now() - etat.verifie >= PERIODE) verifier(); }, 30 * 60000);
+    // Contrôle toutes les 5 min : nouvelle requête seulement si la dernière vérification a 30 min (robuste à la mise en veille).
+    setInterval(() => { if (!etat.verifie || Date.now() - etat.verifie >= PERIODE) verifier(); }, 5 * 60000);
   }
   return { etat, verifier };
 }

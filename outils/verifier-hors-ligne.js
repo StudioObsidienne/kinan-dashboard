@@ -99,7 +99,7 @@ if (!/u\.miseAJour\.verifier === true/.test(cfgTxt)) erreurs.push('config.js : l
 // Question du premier lancement : posée seulement si le réglage est absent, annonce l'origine et la fréquence, « Non » par défaut,
 // et la réponse n'écrit que la clé miseAJour.verifier de kinan.config.json.
 if (!/if \(!config\.charger\(\)\.miseAJour\.explicite\)/.test(main)) erreurs.push('main.js : question des mises à jour posée sans contrôle du réglage existant');
-if (!/raw\.githubusercontent\.com toutes les 6 h/.test(main)) erreurs.push('main.js : la question des mises à jour doit nommer l\'origine et la fréquence');
+if (!/raw\.githubusercontent\.com toutes les 30 min/.test(main)) erreurs.push('main.js : la question des mises à jour doit nommer l\'origine et la fréquence');
 if (!/buttons: \['Oui', 'Non'\], defaultId: 1, cancelId: 1/.test(main)) erreurs.push('main.js : la question des mises à jour doit avoir « Non » par défaut');
 if (!/u\.miseAJour = \{ \.\.\.m, verifier: oui === true \};/.test(cfgTxt)) erreurs.push('config.js : la réponse doit n\'écrire que miseAJour.verifier');
 // Courrier : chargement conditionnel, hôtes venant seulement de fournisseurs.js ou de la saisie validée, un seul processus (claude), envoi confirmé.
