@@ -182,6 +182,7 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
     if (c.response !== 0) return { ok: false, annule: true, message: 'Mise à jour annulée.' };
     const r = await mettreAJour(dossierAppli);
     await majGit();
+    if (r.ok && !r.rien) { etat.appli.nouvelle = false; etat.appli.aRelancer = true; diffuser(); } // mise à jour récupérée : il reste à relancer, plus « disponible »
     if (r.ok && !r.rien && !r.npm) {
       const q = await dialog.showMessageBox(fen, { type: 'info', buttons: ['Relancer maintenant', 'Plus tard'], defaultId: 0, cancelId: 1, noLink: true,
         title: 'Mise à jour', message: r.message });

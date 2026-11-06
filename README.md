@@ -1,4 +1,4 @@
-> **Update:** run `git pull` in this folder, then relaunch `lancer-kinan-os.cmd`. The dashboard can check for new versions itself (off by default, see `config.js`).
+> **Update:** run `git pull` in this folder, then relaunch `lancer-kinan-os.cmd`. The plugin is updated separately (`/plugin`), so the badge can stay on "plugin update available" until you do. The dashboard can check for new versions itself (off by default, see `config.js`).
 
 # Kinan dashboard
 
@@ -12,7 +12,7 @@ The plugin writes the state files; this dashboard only displays them. Without th
 
 - Tested on Windows only. macOS and Linux are untested.
 - The interface text is in French.
-- Version 0.2.0. Electron 45. A next version is in progress.
+- Version 0.2.0. Electron 45. Already used by testers on their own computers (first feedback integrated: animation smoothness, taskbar icon, update flow). A next version is in progress.
 - The dashboard displays what the plugin writes. For the judge to work as designed, use **Sonnet 5.5** with **medium** effort in the main Claude chat.
 
 ## Installation

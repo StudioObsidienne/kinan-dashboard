@@ -1,4 +1,4 @@
-> **Mise à jour :** lance `git pull` dans ce dossier, puis relance `lancer-kinan-os.cmd`. Le tableau de bord peut vérifier seul les nouvelles versions (désactivé par défaut, voir `config.js`).
+> **Mise à jour :** lance `git pull` dans ce dossier, puis relance `lancer-kinan-os.cmd`. Le plugin se met à jour séparément (`/plugin`) : la pastille peut donc rester sur « mise à jour du plugin disponible » tant que ce n'est pas fait. Le tableau de bord peut vérifier seul les nouvelles versions (désactivé par défaut, voir `config.js`).
 
 # Tableau de bord Kinan
 
@@ -12,7 +12,7 @@ Le plugin écrit les fichiers d'état ; ce tableau de bord se contente de les af
 
 - Testé sous Windows uniquement. macOS et Linux n'ont pas été testés.
 - Interface en français.
-- Version 0.2.0. Electron 45. Une prochaine version est en cours.
+- Version 0.2.0. Electron 45. Déjà utilisé par des testeurs sur leur propre ordinateur (premiers retours intégrés : fluidité des animations, icône de la barre des tâches, mise à jour). Une prochaine version est en cours.
 - Le tableau de bord affiche ce que le plugin écrit. Pour que le juge fonctionne comme prévu, utilisez **Sonnet 5.5** avec un effort **moyen** dans le chat Claude principal.
 
 ## Installation

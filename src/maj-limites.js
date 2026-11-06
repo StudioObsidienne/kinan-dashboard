@@ -15,6 +15,7 @@
   function rendre() {
     if (!etat || !ver) return;
     const nouv = ['appli', 'plugin'].filter((k) => etat[k] && etat[k].nouvelle);
+    const relancer = !!(etat.appli && etat.appli.aRelancer);
     const aJour = etat.active && !!etat.verifie && !nouv.length;
     verTxt.textContent = 'v' + etat.appli.locale;
     ver.classList.toggle('a-jour', aJour);
@@ -23,7 +24,9 @@
         : (aJour ? 'À jour' : 'Mise à jour disponible') + ' (vérifié le ' + dateCourte(etat.verifie) + ')';
     ver.setAttribute('aria-label', 'Version ' + etat.appli.locale + (aJour ? ', à jour' : ''));
     ver.hidden = false;
-    pastille.hidden = !nouv.length;
+    pastille.hidden = !nouv.length && !relancer;
+    pastille.textContent = relancer && !nouv.length ? 'relance pour terminer la mise à jour'
+      : nouv.length === 2 ? 'mises à jour disponibles (appli et plugin)' : nouv[0] === 'plugin' ? 'mise à jour du plugin disponible' : 'mise à jour disponible';
     if (carte.open) remplir();
     annoncer();
   }
@@ -54,6 +57,7 @@
     if (p && p.locale) corps.append(el('p', 'Plugin kinan-orchestre : v' + p.locale + (p.distante ? ' installé, v' + p.distante + ' publié.' : ' installé.')));
     if (!etat.active) corps.append(el('p', 'La vérification des mises à jour est désactivée (aucune connexion). Voir le README pour l\'activer.'));
     else if (!etat.verifie) corps.append(el('p', 'Pas encore vérifié : pas de réseau ou GitHub injoignable. Nouvel essai plus tard.'));
+    else if (a.aRelancer) corps.append(el('p', 'Appli mise à jour : relance-la pour terminer.'));
     else if (!a.nouvelle && !(p && p.nouvelle)) corps.append(el('p', 'Tout est à jour (vérifié le ' + dateCourte(etat.verifie) + ').'));
     if (a.nouvelle) {
       const ol = el('ol');
