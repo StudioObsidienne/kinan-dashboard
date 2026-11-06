@@ -10,7 +10,7 @@ function ouvrirLegende() {
     return;
   }
   fenetreLegende = new BrowserWindow({
-    width: 420, height: 520, minWidth: 340, minHeight: 360, backgroundColor: '#14121c', title: 'Kinan OS : légende',
+    width: 420, height: 520, minWidth: 340, minHeight: 360, backgroundColor: '#14121c', title: 'Kinan Orchestre : légende',
     icon: path.join(__dirname, 'assets', 'icon.png'), autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
   });

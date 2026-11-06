@@ -1,4 +1,4 @@
-// Kinan OS : détection de la limite d'utilisation Claude atteinte (« TOKEN OUT »).
+// Kinan Orchestre : détection de la limite d'utilisation Claude atteinte (« TOKEN OUT »).
 // Lit la FIN des journaux ~/.claude/projects/**/*.jsonl (modifiés récemment), cache par chemin + taille + mtime. 0 jeton, 0 réseau.
 // Fonctions pures et testables sans Electron.
 const fs = require('fs');

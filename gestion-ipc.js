@@ -1,4 +1,4 @@
-// Kinan OS : fenêtre Gestion (tâches, historique, jetons). 0 jeton, 0 réseau.
+// Kinan Orchestre : fenêtre Gestion (tâches, historique, jetons). 0 jeton, 0 réseau.
 const { BrowserWindow, ipcMain } = require('electron');
 const fs = require('fs');
 const config = require('./config');
@@ -285,7 +285,7 @@ function ouvrirGestion(onglet) {
   }
   fenetre = new BrowserWindow({
     width: 1000, height: 720, minWidth: 700, minHeight: 500,
-    backgroundColor: '#14121c', title: 'Kinan OS : Gestion',
+    backgroundColor: '#14121c', title: 'Kinan Orchestre : Gestion',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }

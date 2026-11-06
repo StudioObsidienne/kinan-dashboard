@@ -22,7 +22,7 @@ async function maj() {
     $('modele').textContent = d.modele;
     $('etat').textContent = d.etat;
     $('etat').className = 'etat ' + d.etat;
-    document.title = 'Kinan OS : ' + d.nom;
+    document.title = 'Kinan Orchestre : ' + d.nom;
     lignes($('fait'), d.faits.length ? d.faits.map((f) => f.source === 'tache' ? `${f.tache} (terminée)` : `${f.tache} (il y a ${duree(d.maintenant - f.t)})`) : ["Rien d'enregistré"]);
     lignes($('encours'), d.etat !== 'repos' ? [`${d.tache || 'Au travail…'}${d.depuis ? ' (depuis ' + duree(d.maintenant - d.depuis) + ')' : ''}`] : ['Au repos']);
     lignes($('avenir'), d.avenir.length ? d.avenir.map((t) => `${t.titre} (${t.statut})`) : ['Rien de planifié']);

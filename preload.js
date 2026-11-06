@@ -29,7 +29,7 @@ contextBridge.exposeInMainWorld('kinanUI', {
   surSessions: (r) => ipcRenderer.on('sessions:maj', (_e, e) => r(e))
 });
 
-// Fenêtre Gestion : accès limité aux fichiers de Kinan OS.
+// Fenêtre Gestion : accès limité aux fichiers de Kinan Orchestre.
 contextBridge.exposeInMainWorld('gestion', {
   etat: () => ipcRenderer.invoke('gestion:etat'),
   surOnglet: (r) => ipcRenderer.on('gestion:onglet', (_e, o) => r(o)),

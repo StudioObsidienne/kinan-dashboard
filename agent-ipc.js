@@ -1,4 +1,4 @@
-// Kinan OS : petite fenêtre de détail d'un agent (fichiers locaux uniquement, 0 jeton).
+// Kinan Orchestre : petite fenêtre de détail d'un agent (fichiers locaux uniquement, 0 jeton).
 const { BrowserWindow, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -73,7 +73,7 @@ function ouvrirAgent(cle, cacher = false) {
     return true;
   }
   fenetre = new BrowserWindow({
-    width: 360, height: 300, resizable: false, show: !cacher, backgroundColor: '#14121c', title: 'Kinan OS : agent',
+    width: 360, height: 300, resizable: false, show: !cacher, backgroundColor: '#14121c', title: 'Kinan Orchestre : agent',
     icon: path.join(__dirname, 'assets', 'icon.png'), autoHideMenuBar: true, alwaysOnTop: true,
     webPreferences: { preload: path.join(__dirname, 'preload-agent.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });

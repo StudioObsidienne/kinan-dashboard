@@ -1,4 +1,4 @@
-// Kinan OS : détection d'une conversation Claude trop longue (« REFAIRE CONVERSATION »). 0 jeton, 0 réseau.
+// Kinan Orchestre : détection d'une conversation Claude trop longue (« REFAIRE CONVERSATION »). 0 jeton, 0 réseau.
 // Mêmes seuils et même lecture que hooks/rappel-relais.js : ≥ 120 min OU contexte ≥ 300 000 jetons.
 // Lit seulement la tête (1er horodatage) et la queue (dernier usage assistant) du journal .jsonl le plus récent.
 const fs = require('fs');

@@ -1,4 +1,4 @@
-// Kinan OS : petite fenêtre « question » quand Kinan attend une réponse de l'utilisateur. 0 jeton, 0 réseau.
+// Kinan Orchestre : petite fenêtre « question » quand Kinan attend une réponse de l'utilisateur. 0 jeton, 0 réseau.
 const { BrowserWindow, ipcMain, screen } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -30,7 +30,7 @@ function ouvrir(q, cacher) {
   fenetre = new BrowserWindow({
     width: L, height: H, x: zone.x + zone.width - L - marge, y: zone.y + zone.height - H - marge,
     frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true, show: false,
-    backgroundColor: '#14121c', title: 'Kinan OS : question',
+    backgroundColor: '#14121c', title: 'Kinan Orchestre : question',
     webPreferences: {
       preload: path.join(__dirname, 'preload-question.js'), contextIsolation: true, nodeIntegration: false,
       autoplayPolicy: 'no-user-gesture-required'

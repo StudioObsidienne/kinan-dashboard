@@ -1,4 +1,4 @@
-// Kinan OS : sons discrets (synthèse Web Audio, aucun fichier). Joués par une fenêtre cachée,
+// Kinan Orchestre : sons discrets (synthèse Web Audio, aucun fichier). Joués par une fenêtre cachée,
 // donc audibles même si la fenêtre principale est réduite. 0 jeton, 0 réseau.
 const { BrowserWindow } = require('electron');
 const fs = require('fs');

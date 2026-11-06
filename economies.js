@@ -1,4 +1,4 @@
-// Kinan OS : mini-rapport « coche verte » sur les 3 dernières heures (fenêtre glissante). 0 jeton, 0 réseau.
+// Kinan Orchestre : mini-rapport « coche verte » sur les 3 dernières heures (fenêtre glissante). 0 jeton, 0 réseau.
 // Sources : journaux ~/.claude/projects/**/*.jsonl (usage par message, dédoublonné par message.id),
 // ~/.kinan-os/taches.json (statut « fait », heure de fin exacte « fin » écrite par hooks/etat.js) ; pour les anciennes
 // tâches sans « fin » : historique.jsonl (fin estimée = passage de l'agent au repos), comptées à part (« estimees »).

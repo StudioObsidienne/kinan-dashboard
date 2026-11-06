@@ -1,4 +1,4 @@
-// Kinan OS : bureau en pixel art dessiné en code (canvas) + panneau des agents.
+// Kinan Orchestre : bureau en pixel art dessiné en code (canvas) + panneau des agents.
 // États : repos | travail | erreur | doute. Aucune image externe, aucun appel réseau.
 (() => {
   'use strict';

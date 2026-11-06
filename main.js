@@ -1,4 +1,4 @@
-// Kinan OS (édition publique) : processus principal.
+// Kinan Orchestre (édition publique) : processus principal.
 // Lit les fichiers d'état locaux écrits par les hooks du plugin et les transmet à l'interface.
 // Aucun appel à Claude (0 jeton) et aucune connexion réseau : toute requête http(s)/ws est bloquée (voir bloquerReseau).
 const { app, BrowserWindow, Menu, screen, Notification, ipcMain, clipboard, session } = require('electron');
@@ -72,7 +72,7 @@ function creerFenetre() {
     minWidth: 760,
     minHeight: 520,
     backgroundColor: '#14121c',
-    title: 'Kinan OS',
+    title: 'Kinan Orchestre',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
@@ -102,7 +102,7 @@ function creerFenetre() {
     }
   }, 1000);
   // Fermer la fenêtre principale quitte vraiment l'appli (les fenêtres cachées du son et du détail ne la gardent plus en vie :
-  // sinon un processus invisible gardait le verrou et empêchait de relancer Kinan OS).
+  // sinon un processus invisible gardait le verrou et empêchait de relancer Kinan Orchestre).
   fenetre.on('closed', () => { clearInterval(minuteur); app.quit(); });
 }
 
@@ -144,7 +144,7 @@ app.whenReady().then(() => {
   // Clone déployé (un exemplaire de plus, à partir de 2) : notification système ; le petit son est joué par son-ipc.js.
   const notifierClone = ({ agent, n, tache }) => {
     if (!Notification.isSupported()) return;
-    const note = new Notification({ title: 'Kinan OS : clone', body: `${config.nomDe(agent)} n°${n} déployé${tache ? ' : ' + tache : ''}` });
+    const note = new Notification({ title: 'Kinan Orchestre : clone', body: `${config.nomDe(agent)} n°${n} déployé${tache ? ' : ' + tache : ''}` });
     note.on('click', () => { const w = fenetrePrincipale; if (w && !w.isDestroyed()) { if (w.isMinimized()) w.restore(); w.show(); w.focus(); } });
     note.show();
   };
@@ -152,7 +152,7 @@ app.whenReady().then(() => {
   agentFenetre.enregistrer(lireEtat);
   question.demarrer({ lireEtat }); // fenêtre « question » quand Kinan est en doute
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: 'Kinan OS', submenu: [
+    { label: 'Kinan Orchestre', submenu: [
       { label: 'Gestion (tâches, historique, jetons)', accelerator: 'CmdOrCtrl+G', click: () => gestion.ouvrirGestion() },
       { id: 'sons', label: 'Sons', type: 'checkbox', checked: son.actif(), click: (item) => son.regler(item.checked) },
       { type: 'separator' }, { role: 'reload', label: 'Recharger' }, { role: 'quit', label: 'Quitter' }
@@ -195,7 +195,7 @@ app.whenReady().then(() => {
       if (n.actif && !etatTokenOut.actif && now >= reporteJusqua && now - derniereNotifRelais >= 3600000 && Notification.isSupported()) {
         derniereNotifRelais = now;
         const h = Math.floor(n.minutes / 60);
-        new Notification({ title: 'Kinan OS : refaire la conversation', body: `Ouverte depuis ${h} h ${String(n.minutes % 60).padStart(2, '0')} · contexte ${Math.round(n.ctx / 1000)} k jetons. Tape /relais dans Claude.` }).show();
+        new Notification({ title: 'Kinan Orchestre : refaire la conversation', body: `Ouverte depuis ${h} h ${String(n.minutes % 60).padStart(2, '0')} · contexte ${Math.round(n.ctx / 1000)} k jetons. Tape /relais dans Claude.` }).show();
       }
       if (change) diffuserRelais();
     } catch { /* ne jamais planter */ }
