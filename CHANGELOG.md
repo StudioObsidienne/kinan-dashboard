@@ -10,7 +10,7 @@ Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il ser
 - Doubles des agents : nouveau placement sur emplacements libres (`placement-logique.js`), sans traverser les objets.
 - Glisser-déposer du décor mural, choix des agents et objets affichés dans « Paramètres du royaume », particules du panneau refaites.
 - Drafion : fonte et réveil brutal refaits sur le modèle d'avatar existant ; fouet avec vrai claquement ; Jean refait (sans auréole, chœur de voix douces).
-- Ouverture : fenêtre affichée à `ready-to-show`, en-tête sans saut ; icône du raccourci corrigée à chaque lancement.
+- Ouverture : fenêtre affichée à `ready-to-show`, en-tête sans saut ; icône du raccourci corrigée à chaque lancement ; le raccourci (Bureau et menu Démarrer) porte l'identifiant d'application `kinan-os.dashboard` : la fenêtre se regroupe sous « Kinan Orchestre » (plus « Electron ») et s'épingle correctement à la barre des tâches.
 
 Mise à jour humoristique et interactive du bureau des agents. Tout est local : aucun appel réseau, aucun appel IA, aucun jeton, aucune modification de l'état réel des agents. Son muet par défaut ; `prefers-reduced-motion` respecté.
 
