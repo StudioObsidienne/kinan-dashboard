@@ -21,12 +21,12 @@
   /* En-tête */
   .entete { display: flex; align-items: center; justify-content: space-between; gap: 16px;
     padding: 10px 18px; border-bottom: 1px solid var(--ligne); background: var(--entete, #17141f); }
-  .marque { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .marque { display: flex; align-items: center; gap: 10px; flex: none; }
   #logo { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
   h1, h2 { font-family: var(--police-titre, inherit); }
-  h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .02em; }
+  h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
   .marque p { margin: 0; color: var(--doux); font-size: 12px; white-space: nowrap; }
-  .statut { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .statut { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
   .compteurs { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
   .compteurs li { display: flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 99px;
     background: var(--surface2); border: 1px solid var(--ligne); font-size: 12px; color: var(--doux); }
@@ -122,7 +122,7 @@
   .journal .rien { display: block; color: var(--pale); }
   .journal::-webkit-scrollbar { width: 8px; }
   .journal::-webkit-scrollbar-thumb { background: #2f2945; border-radius: 4px; }
-  .pied { margin: 0; color: var(--pale); font-size: 11px; }
+  .pied { margin: 0; padding-right: 104px; color: var(--pale); font-size: 11px; } /* libère le coin du bouton « Parchemin » (chasse) */
 
   /* TOKEN OUT : l'enseigne est dessinée en pixels dans la scène (scene.js), accrochée par deux chaînes au-dessus des agents.
      Ici : le texte détaillé et le bouton, posés sur l'enseigne (même repère : 1 unité de scène = --u). */
@@ -142,10 +142,23 @@
   .tk-masquer:focus-visible { outline: 2px solid #ffd166; outline-offset: 2px; }
   .pastille-tokenout { font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .04em; padding: 3px 10px; border-radius: 99px; cursor: pointer; color: #ffe3e6;
     background: #4a1118; border: 1px solid #ff6b78; box-shadow: 0 0 10px #ff3b4a77; }
-  @media (prefers-reduced-motion: reduce) { .tokenout { animation: none; } }
+  /* Flash d'impact TOKEN OUT (≈ 220 ms, une seule fois par limite atteinte) : 2 pulsations rouges puis 1 blanche, sur les bords du cadre seulement
+     (centre dégagé, opacité modérée : surface et contraste réduits pour la photosensibilité). Mouvement réduit / mode calme : liseré fixe, sans clignotement. */
+  .tk-flash { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+  .tk-flash[hidden] { display: none; }
+  .tk-flash::before, .tk-flash::after { content: ""; position: absolute; inset: 0; opacity: 0; }
+  .tk-flash::before { background: radial-gradient(ellipse at center, #ff1f3300 40%, #ff1f33bf 100%); }
+  .tk-flash::after { background: radial-gradient(ellipse at center, #ffffff00 45%, #ffffff8c 100%); }
+  .tk-flash.on::before { animation: tk-fl-rouge .22s linear both; }
+  .tk-flash.on::after { animation: tk-fl-blanc .22s linear both; }
+  @keyframes tk-fl-rouge { 0%, 35% { opacity: 1; } 36%, 100% { opacity: 0; } }
+  @keyframes tk-fl-blanc { 0%, 45% { opacity: 0; } 46%, 80% { opacity: 1; } 81%, 100% { opacity: 0; } }
+  .tk-flash.calme::before { opacity: 1; background: none; box-shadow: inset 0 0 0 3px #ff4b5c, inset 0 0 14px #ff4b5c88; }
+  @media (prefers-reduced-motion: reduce) { .tokenout { animation: none; } .tk-flash.on::before, .tk-flash.on::after { animation: none; } }
   /* Version (coche verte si à jour), mise à jour disponible, bulle rouge « limite » */
-  .titre-ligne { display: flex; align-items: center; gap: 8px; }
-  .v-lignes { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 1.25; }
+  /* Hauteur réservée : les lignes de version (arrivées après le premier affichage) ne doivent pas agrandir l'en-tête ni faire sauter la scène. */
+  .titre-ligne { display: flex; align-items: center; gap: 8px; height: 24px; min-width: 270px; }
+  .v-lignes { display: flex; flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.08; }
   .v-ligne { display: inline-flex; align-items: center; gap: 3px; }
   .v-ligne[hidden] { display: none; }
   .version { display: inline-flex; align-items: center; gap: 3px; padding: 0; font-size: 11px; color: var(--pale); background: none; border: 0; cursor: pointer; }
@@ -154,7 +167,14 @@
   .version .v-coche { display: none; width: 11px; height: 11px; fill: none; stroke: #5fd3a0; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
   .version.a-jour .v-coche { display: inline; }
   .pastille-maj { font: inherit; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; cursor: pointer; color: #ffd166; background: #2b1d06; border: 1px solid #ffb020aa; }
-  .bulle-limite { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; white-space: nowrap; color: #fff; background: #b4232f; border: 1px solid #ff6b78; box-shadow: 0 0 10px #ff3b4a66; }
+  /* Bulle « limite » (bas du panneau) : couleurs posées par bulle-limite.js, en dégradé continu selon le % consommé (neutre, ambre, rouge) */
+  .bulle-limite { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; margin: 0; max-width: 100%; padding: 4px 11px; border-radius: 99px; white-space: nowrap; cursor: default;
+    font-size: 12px; font-weight: 700; color: var(--bl-texte, #b9b3d1); background: var(--bl-fond, #1e1a30); border: 1px solid var(--bl-bord, #3b3458);
+    box-shadow: 0 0 calc(var(--bl-halo, 0) * 20px) rgba(255, 59, 74, var(--bl-halo, 0)); transition: background-color .6s, color .6s, border-color .6s, box-shadow .6s; }
+  .bulle-limite[data-niveau="discret"] { font-size: 11.5px; font-weight: 600; }
+  .bl-point { flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .bl-jauge { flex: none; width: 34px; height: 4px; border-radius: 2px; background: #ffffff2b; overflow: hidden; }
+  .bl-jauge i { display: block; height: 100%; width: calc(var(--bl-pct, 0) * 1%); background: currentColor; border-radius: 2px; }
   .maj-carte { position: fixed; inset: 54px auto auto 18px; margin: 0; width: min(400px, calc(100vw - 32px)); padding: 14px 16px; color: var(--texte);
     background: var(--surface); border: 1px solid var(--ligne); border-radius: 12px; box-shadow: 0 12px 40px #0008; }
   .maj-carte::backdrop { background: #0a09104d; }
@@ -281,7 +301,6 @@
         <button type="button" id="btn-test" class="bouton" title="Joue le son d'une question puis celui d'une fin de travail">Tester le son</button>
       </div>
       <button type="button" id="pastille-tokenout" class="pastille-tokenout" hidden title="Limite d'utilisation Claude atteinte : cliquer pour réafficher l'enseigne">TOKEN OUT</button>
-      <span id="bulle-limite" class="bulle-limite" role="status" hidden></span>
       <button type="button" id="btn-economies" class="btn-coche" aria-haspopup="dialog" aria-label="Rapport des 3 dernières heures"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg><span id="pastille-eco" class="eco-nouveau" hidden>nouveau</span></button>
       <ul class="compteurs" id="compteurs" aria-label="Résumé des états"></ul>
       <span class="mode" id="mode">connexion…</span>
@@ -308,6 +327,7 @@
       </div>
       <div class="cadre" id="cadre">
         <canvas id="toile" width="400" height="270" role="img" aria-label="Bureau des agents"></canvas>
+        <div class="tk-flash" id="tk-flash" aria-hidden="true" hidden></div>
         <div class="tokenout" id="tokenout" role="alert" hidden>
           <p class="tk-titre">TOKEN OUT</p>
           <p class="tk-sous" id="tk-sous"></p>
@@ -324,6 +344,7 @@
         <h2>Journal</h2>
         <ol class="journal" id="journal" aria-live="polite"></ol>
       </section>
+      <p id="bulle-limite" class="bulle-limite" role="status" aria-live="polite" aria-atomic="true" hidden><span class="bl-point" aria-hidden="true"></span><span id="bl-txt"></span><span class="bl-jauge" aria-hidden="true"><i></i></span></p>
       <p class="pied">Aucun jeton consommé : cet écran lit seulement un fichier d'état local.</p>
     </aside>
   </main>
@@ -344,9 +365,25 @@
     <div class="maj-boutons"><button type="button" id="maj-popup-tard">Plus tard</button><button type="button" id="maj-popup-go" class="principal">Mettre à jour</button></div>
   </section>
   <script src="avatars.js"></script>
+  <script src="placement-logique.js"></script>
   <script src="scene.js"></script>
+  <script src="egg-core.js"></script>
+  <script src="eggs/sommeil-logique.js"></script>
+  <script src="eggs/drafion-sommeil.js"></script>
+  <script src="eggs/objets-logique.js"></script>
+  <script src="eggs/objets.js"></script>
+  <script src="eggs/chasse-logique.js"></script>
+  <script src="eggs/chasse.js"></script>
+  <script src="eggs/jean-logique.js"></script>
+  <script src="eggs/jean.js"></script>
+  <script src="eggs/fouet-logique.js"></script>
+  <script src="eggs/fouet.js"></script>
+  <script src="eggs/royaume-logique.js"></script>
+  <script src="eggs/royaume.js"></script>
   <script src="boutons.js"></script>
   <script src="economies-carte.js"></script>
+  <script src="limite-logique.js"></script>
+  <script src="bulle-limite.js"></script>
   <script src="maj-limites.js"></script>
 </body>
 </html>

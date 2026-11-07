@@ -8,7 +8,7 @@ const DOSSIER = config.DOSSIER;
 // Agents connus : le juge puis les agents de la configuration (nom, modèle).
 const agentsConnus = () => {
   const c = config.charger();
-  return Object.fromEntries([['kinan', ['Kinan', 'opus']], ...c.agents.map((a) => [a.id, [a.nom, a.modele]])]);
+  return Object.fromEntries([['kinan', [c.juge.nom, c.juge.modele]], ...c.agents.map((a) => [a.id, [a.nom, a.modele]])]);
 };
 const lireJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 

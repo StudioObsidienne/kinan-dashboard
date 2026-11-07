@@ -1,5 +1,5 @@
 // Version de l'appli (coche verte quand elle est à jour), pastille « mise à jour disponible » avec ses étapes,
-// et bulle rouge « limite » quand il reste 10 % ou moins de la limite 5 h ou hebdomadaire de Claude Code. 0 jeton.
+// (la bulle « limite » est dans bulle-limite.js). 0 jeton.
 (() => {
   'use strict';
   const api = window.kinanUI;
@@ -99,22 +99,4 @@
   const appliquer = (e) => { if (e && e.appli) { etat = e; rendre(); } };
   api.majLire().then(appliquer).catch(() => {});
   if (api.surMaj) api.surMaj(appliquer);
-
-  // ---- Bulle rouge « limite » : 10 % ou moins restant sur la fenêtre 5 h ou hebdomadaire ----
-  const bulle = $('bulle-limite');
-  const SEUIL = 10;
-  let limites = { fenetres: [] };
-  const hhmm = (ms) => new Date(ms).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-  function rendreLimites() {
-    if (!bulle) return;
-    const basses = (limites.fenetres || []).filter((f) => f.restant <= SEUIL && (!f.reprise || f.reprise > Date.now()));
-    if (!basses.length) { bulle.hidden = true; return; }
-    const fmt = (n) => String(n).replace('.', ',');
-    bulle.textContent = 'Limite ' + basses.map((f) => f.libelle + ' : ' + fmt(f.restant) + ' % restant').join(' · ');
-    bulle.title = basses.map((f) => 'Limite ' + f.libelle + (f.reprise ? ' : reprise ' + hhmm(f.reprise) : '')).join('\n');
-    bulle.hidden = false;
-  }
-  if (api.limitesLire) { api.limitesLire().then((l) => { limites = l || limites; rendreLimites(); }).catch(() => {}); }
-  if (api.surLimites) api.surLimites((l) => { limites = l || limites; rendreLimites(); });
-  setInterval(rendreLimites, 30000);
 })();

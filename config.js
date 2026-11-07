@@ -18,6 +18,16 @@ const DEFAUT_AGENTS = {
 };
 const MODELES = ['haiku', 'sonnet', 'opus', 'inherit'];
 const PAR_BASE = { lecture: 'haiku', production: 'sonnet', expert: 'opus' };
+// Modèle du juge : celui de agents/kinan.md du plugin (« model: sonnet »), verrouillé. test/config-modele.test.js vérifie l'accord.
+const MODELE_JUGE = 'sonnet';
+// Modèle saisi : casse et espaces ignorés (« Sonnet », « claude-sonnet-5-5 » -> « sonnet »). Sinon null. Mêmes règles que le plugin.
+function normModele(v) {
+  if (typeof v !== 'string') return null;
+  const s = v.trim().toLowerCase();
+  if (MODELES.includes(s)) return s;
+  const m = /^claude-(haiku|sonnet|opus)(?:-|$)/.exec(s);
+  return m ? m[1] : null;
+}
 
 const propre = (t, n) => String(t == null ? '' : t).replace(/[\r\n\t]+/g, ' ').replace(/[<>`]/g, '').trim().slice(0, n);
 const couleur = (v) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null);
@@ -60,7 +70,7 @@ function lire() {
 
   const uj = u.juge && typeof u.juge === 'object' ? u.juge : {};
   if (uj.nom !== undefined || uj.role !== undefined) alertes.push('juge : nom et rôle verrouillés, valeurs ignorées');
-  const juge = { id: 'kinan', nom: 'Kinan', couleur: couleur(uj.couleur) };
+  const juge = { id: 'kinan', nom: 'Kinan', modele: MODELE_JUGE, couleur: couleur(uj.couleur) };
 
   const source = u.agents && typeof u.agents === 'object' && !Array.isArray(u.agents) ? u.agents : DEFAUT_AGENTS;
   const agents = [];
@@ -72,7 +82,8 @@ function lire() {
     if ((a.option || (DEFAUT_AGENTS[id] || {}).option) === 'courrier' && !courrierActif()) continue; // option courrier désactivée : agent masqué
     const def = DEFAUT_AGENTS[id] || {};
     const base = typeof a.base === 'string' ? a.base : def.base || 'production';
-    const modele = MODELES.includes(a.modele) ? a.modele : def.modele || PAR_BASE[base] || 'inherit';
+    // Choix explicite (clé présente et valide) conservé ; clé absente : défaut de l'agent, de la base, puis Sonnet (plus de repli « inherit »).
+    const modele = normModele(a.modele) || def.modele || PAR_BASE[base] || 'sonnet';
     agents.push({ id, base, modele, nom: propre(a.nom || def.nom || id, 24), role: propre(a.role || def.role || '', 160), couleur: couleur(a.couleur) });
   }
 
@@ -140,4 +151,4 @@ function memoriserMiseAJour(oui) {
   } catch { return false; }
 }
 
-module.exports = { horsTravail, DOSSIER, F_UTILISATEUR, charger, ids, nomDe, contraste, lisible, memoriserMiseAJour };
+module.exports = { horsTravail, DOSSIER, F_UTILISATEUR, charger, ids, nomDe, contraste, lisible, memoriserMiseAJour, normModele, MODELE_JUGE };

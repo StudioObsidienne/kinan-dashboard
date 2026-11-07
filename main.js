@@ -76,6 +76,7 @@ function creerFenetre() {
     title: 'Kinan Orchestre',
     icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     autoHideMenuBar: true,
+    show: false, // affichée à ready-to-show : pas d'icône Electron ni de fenêtre vide au lancement
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -83,6 +84,9 @@ function creerFenetre() {
       sandbox: true
     }
   });
+  const montrer = () => { if (!fenetre.isDestroyed() && !fenetre.isVisible()) fenetre.show(); };
+  fenetre.once('ready-to-show', montrer);
+  setTimeout(montrer, 4000); // filet de sécurité si ready-to-show n'arrive pas
   if (lireReglages().fenetre && lireReglages().fenetre.maximisee) fenetre.maximize();
   let minuterieBounds = null;
   const planifier = () => { clearTimeout(minuterieBounds); minuterieBounds = setTimeout(() => { if (!fenetre.isDestroyed()) memoriserBounds(fenetre); }, 800); };

@@ -1,9 +1,8 @@
-# Cree (une fois) le raccourci "Kinan Orchestre" sur le Bureau, avec l'icone du dashboard.
+# Cree (ou remet a jour, a chaque lancement) le raccourci "Kinan Orchestre" sur le Bureau, avec l'icone du dashboard.
 $ErrorActionPreference = 'Stop'
 try {
   $racine = Split-Path -Parent $PSScriptRoot
   $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Kinan Orchestre.lnk'
-  if (Test-Path $lnk) { exit 0 }
   $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
   $s.TargetPath = Join-Path $racine 'lancer-kinan-os.cmd'
   $s.WorkingDirectory = $racine

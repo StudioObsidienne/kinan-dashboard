@@ -16,6 +16,8 @@
   const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
   let calme = mq.matches || /[?&]calme=1/.test(location.search); // calme=1 : test du mouvement réduit
   let sale = true;
+  const superposes = []; // dessins ajoutés par les modules src/eggs (KinanEquipe.surDessin)
+  const persos = {}; // corps d'agent redessinés par les modules src/eggs (KinanEquipe.corpsDe) : { corps() -> vrai si dessiné, devant() }
   const surMq = (e) => { calme = e.matches; sale = true; };
   if (mq.addEventListener) mq.addEventListener('change', surMq); else mq.addListener(surMq);
 
@@ -69,7 +71,7 @@
     drafion: { nom: 'Drafion', modele: 'Haiku', role: 'Lectures et vérifications', col: 0, rang: 0,
       ligne: '#ffd04d', vif: 1.7,
       ui: '#ffb84a', objet: 'loupe', tasse: false },
-    kinan: { nom: 'Kinan', modele: 'Opus', role: 'Juge, chef d\'orchestre', col: 1, rang: 0,
+    kinan: { nom: 'Kinan', modele: 'Sonnet', role: 'Juge, chef d\'orchestre', col: 1, rang: 0,
       ligne: '#f7cba3', vif: 1,
       ui: '#efe6d6', objet: 'marteau', tasse: true, banc: true },
     skyze: { nom: 'Skyze', modele: 'Sonnet', role: 'Production courante', col: 2, rang: 0,
@@ -112,7 +114,43 @@
   };
   for (const k of SIEGES) { if (!ID_DE[k]) delete AGENTS[k]; else habiller(k, EQUIPE.find((a) => a.id === ID_DE[k])); }
   if (CFG && CFG.juge && CFG.juge.couleur) { AGENTS.kinan.ui = CFG.juge.couleur; AGENTS.kinan.couleurPerso = CFG.juge.couleur; }
-  window.KinanEquipe = { SIEGE_DE, ID_DE }; // lu par boutons.js (bulles) : identifiant configuré <-> siège
+  const deco = { dec: {}, rempl: {}, avant: [], apres: null, heure: null, lampe: null };
+  const decal = (id) => deco.dec[id] || [0, 0];
+  window.KinanEquipe = { SIEGE_DE, ID_DE, // lu par boutons.js (bulles) et src/egg-core.js : identifiant configuré <-> siège
+    agents: () => CLES.map((k) => ({ cle: k, cx: AGENTS[k].cx, haut: AGENTS[k].haut, s: AGENTS[k].s, nom: AGENTS[k].nom, visible: !masques[k] })),
+    // Affichage seulement (panneau Royaume) : masquer un agent retire son bureau, ses doubles et ses zones du dessin, jamais son état ni son suivi.
+    affichage: {
+      masquer: (k, v) => { if (!AGENTS[k] || k === 'kinan') return false; const m = !!v; if (!!masques[k] === m) return true; if (m) masques[k] = true; else delete masques[k]; majAffichage(); return true; },
+      masque: (k) => !!masques[k],
+      liste: () => Object.keys(masques)
+    },
+    doubles: () => ({ places: Object.fromEntries(Object.keys(doubles.places).map((k) => [k, doubles.places[k].map((p) => [p.x, p.y])])), manques: { ...doubles.manques } }),
+    etat: (k) => (etats[k] ? { ...etats[k] } : null),
+    calme: () => calme,
+    dim: { W, H, DY },
+    get objets() { return { horloge: [190, 22, 20, 20], plante: [121, 130, 18, 26], lampadaire: [258, 96, 22, 14], enseigne: [ENS.x, ENS.y, ENS.w, ENS.h],
+      fenetre: [21, 9, 86, 52], tableau: [129, 15, 40, 32], panneau: [231, 15, 48, 34], etagere: [289, 14, 96, 48] }; },
+    surDessin: (fn) => { superposes.push(fn); sale = true; },
+    salir: () => { sale = true; },
+    // Corps d'un agent dessiné par un module (sommeil, fouet) : o.corps(g, a, cx, cy, pose, t) renvoie vrai s'il a dessiné le corps
+    // (le premier inscrit a la priorité), o.devant(g, a, t) dessine après le bureau et les mains. Renvoie la fonction de retrait.
+    corpsDe: (k, o) => {
+      if (!o || typeof o !== 'object') return () => {};
+      (persos[k] = persos[k] || []).push(o); sale = true;
+      return () => { const l = persos[k] || [], i = l.indexOf(o); if (i >= 0) l.splice(i, 1); sale = true; };
+    },
+    // Personnalisation du décor (src/eggs/royaume.js) : tout est vide par défaut, le bureau reste identique sans ce module.
+    deco: {
+      decaler: (id, dx, dy) => { if (dx || dy) deco.dec[id] = [dx | 0, dy | 0]; else delete deco.dec[id]; },
+      decalage: (id) => (deco.dec[id] || [0, 0]).slice(),
+      remplacer: (id, fn) => { if (typeof fn === 'function') deco.rempl[id] = fn; else delete deco.rempl[id]; sale = true; },
+      remplace: (id) => !!deco.rempl[id],
+      avantAgents: (fn) => { deco.avant.push(fn); sale = true; },
+      apresDecor: (fn) => { deco.apres = typeof fn === 'function' ? fn : null; },
+      heure: (h) => { deco.heure = Number.isFinite(h) ? h : null; },
+      lampe: (c) => { deco.lampe = c && typeof c === 'object' ? c : null; },
+      redessiner: () => { mom = moment(heure()); decor(); sale = true; }
+    } };
   const CLES = Object.keys(AGENTS);
   let ORDRE = ['drafion', 'kinan', 'skyze', 'johms', 'quatre', 'cinq'].filter((k) => AGENTS[k]); // arrière puis avant
   // Trois agents ou moins (courrier désactivé) : tous devant le juge, sur une seule rangée centrée.
@@ -143,7 +181,7 @@
   let heureForcee = null;
   const m = location.search.match(/heure=(\d+(?:\.\d+)?)/);
   if (m) heureForcee = parseFloat(m[1]);
-  const heure = () => { if (heureForcee !== null) return heureForcee; const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
+  const heure = () => { if (heureForcee !== null) return heureForcee; if (deco.heure !== null) return deco.heure; const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
   function moment(h) {
     if (h < 5.5 || h >= 21) return { nom: 'nuit', haut: '#0e1330', bas: '#2a2f66', voile: 0.34, colline: '#171a33', toit: '#1f2340' };
     if (h < 8) return { nom: 'aube', haut: '#5d6fba', bas: '#f6ad86', voile: 0.12, colline: '#3d4a6a', toit: '#4a4f73' };
@@ -270,9 +308,13 @@
     blocs([[30, 52, 4, 7]], '#5fae6b', '#1f3a2c'); r(29, 54, 2, 2, '#5fae6b'); px(31, 53, '#a8e0a0');
     blocs([[28, 57, 8, 2]], '#c4683f'); px(32, 51, '#ff9fb2');
     // Tableau : logo de l'utilisateur pixelisé (logo.png du dossier d'état, voir README), sinon motif neutre (paysage).
+    g.save(); g.translate(decal('tableau')[0], decal('tableau')[1]);
     r(129, 15, 40, 32, K); r(130, 16, 38, 30, '#c9a46a'); r(131, 17, 36, 1, '#e3c58a');
-    if (logoPix) { r(133, 19, 32, 24, logoPix.fond); g.drawImage(logoPix.toile, 133, 19); } else motifNeutre(133, 19);
+    if (deco.rempl.tableau && deco.rempl.tableau(g, 133, 19)) { /* variante dessinée par le module */ }
+    else if (logoPix) { r(133, 19, 32, 24, logoPix.fond); g.drawImage(logoPix.toile, 133, 19); } else motifNeutre(133, 19);
+    g.restore();
     // Horloge (cadran fixe, aiguilles dynamiques)
+    g.save(); g.translate(decal('horloge')[0], decal('horloge')[1]);
     ovale(200, 32, 14, 14, K); ovale(200, 32, 13, 13, '#8a6446'); ovale(200, 32, 11, 11, '#f6eedb');
     ovale(200, 33, 11, 11, '#f6eedb'); ovale(201, 33, 10, 10, '#f6eedb');
     for (let h = 0; h < 12; h++) {
@@ -280,11 +322,14 @@
       const c = h % 3 === 0 ? '#5a4a6a' : '#b8aa96';
       px(199.5 + Math.sin(a) * 9 - 0.5, 31.5 - Math.cos(a) * 9 - 0.5 + 0.5, c);
     }
+    g.restore();
     // Panneau de liège avec post-it
+    g.save(); g.translate(decal('panneau')[0], decal('panneau')[1]);
     r(231, 15, 48, 34, K); r(232, 16, 46, 32, '#8a6446'); r(234, 18, 42, 28, '#c9955c');
     for (let i = 0; i < 40; i++) px(234 + alea(i) * 42, 18 + alea(i + 50) * 28, '#b07c48');
     const notes = [[237, 20, '#ffe27a'], [251, 22, '#8fd3ff'], [264, 20, '#ff9fb2'], [242, 33, '#b8f28a'], [257, 34, '#f4f1ea']];
     notes.forEach(([x, y, c]) => { r(x + 1, y + 1, 10, 9, '#00000030'); r(x, y, 10, 9, c); r(x + 2, y + 3, 6, 1, '#00000026'); r(x + 2, y + 5, 4, 1, '#00000026'); px(x + 4, y, '#d6455d'); });
+    g.restore();
     // Étagère et livres
     for (const y of [30, 58]) { r(289, y, 96, 3, '#94694a'); r(289, y, 96, 1, '#b08060'); r(289, y + 3, 96, 1, '#231d32'); r(294, y + 3, 2, 3, '#6b4a35'); r(378, y + 3, 2, 3, '#6b4a35'); }
     const livres = ['#d6455d', '#4f7fd8', '#f2c14e', '#5fae6b', '#a874ff', '#e07a5f', '#4fc2c0'];
@@ -303,7 +348,8 @@
     r(262, 158, 14, 3, K); r(263, 158, 12, 2, '#3a3550');
     r(268, 108, 2, 50, '#3a3550'); r(268, 108, 1, 50, '#55507a');
     // Ombres des bureaux
-    for (const k of CLES) { const a = AGENTS[k], w = a.banc ? 90 : 74; r(a.cx - w / 2, (a.banc ? 160 : a.haut + 22), w, 3, 'rgba(0,0,0,.28)'); }
+    for (const k of CLES) { if (masques[k]) continue; const a = AGENTS[k], w = a.banc ? 90 : 74; r(a.cx - w / 2, (a.banc ? 160 : a.haut + 22), w, 3, 'rgba(0,0,0,.28)'); }
+    if (deco.apres) { try { g.save(); deco.apres(g); g.restore(); } catch { deco.apres = null; } } // teintes de thème, rideaux, tapis (royaume.js)
     g.setTransform(1, 0, 0, 1, 0, 0);
     g = principal;
   }
@@ -358,11 +404,13 @@
   function horloge() {
     const d = new Date();
     const s = d.getSeconds(), mi = d.getMinutes() + s / 60, h = (d.getHours() % 12) + mi / 60;
+    g.save(); g.translate(decal('horloge')[0], decal('horloge')[1]);
     ovale(200, 32, 10, 10, '#f6eedb');
     aiguille(199.5, 31.5, (h / 12) * Math.PI * 2, 5, '#3a2e4a');
     aiguille(199.5, 31.5, (mi / 60) * Math.PI * 2, 8, '#3a2e4a');
     if (!calme) aiguille(199.5, 31.5, (s / 60) * Math.PI * 2, 8, '#e5484d');
     r(199, 31, 2, 2, '#3a2e4a');
+    g.restore();
   }
 
   function guirlande(t, lueurs) {
@@ -382,6 +430,8 @@
   function plante(t) {
     // Plante en pot entre Drafion et Kinan
     const bx = 130, by = 152;
+    g.save(); g.translate(decal('plante')[0], decal('plante')[1]);
+    if (deco.rempl.plante) deco.rempl.plante(g, t, bx, by); else {
     const feuilles = [[-6, -8, 5, 2], [6, -9, 5, 2], [-4, -14, 4, 2], [5, -15, 4, 2], [0, -20, 3, 3], [-8, -3, 4, 2], [8, -4, 4, 2]];
     const off = (i, f) => (calme ? 0 : Math.round(Math.sin(t / 1600 + i * 0.9) * f));
     r(bx - 1, by - 22, 2, 14, '#3d7a4e');
@@ -393,6 +443,8 @@
     });
     blocs([[bx - 7, by - 6, 14, 3]], '#d9804f'); r(bx - 6, by - 3, 12, 9, '#c4683f'); r(bx - 6, by - 3, 12, 1, '#9c4e2e');
     r(bx + 3, by - 2, 2, 7, '#a9573a'); r(bx - 6, by + 6, 12, 1, '#7a3e26');
+    }
+    g.restore();
     // Liane qui pend de l'étagère
     for (let i = 0; i < 18; i++) {
       const x = 372 + (calme ? 0 : Math.round(Math.sin(t / 1900 + i * 0.25) * (i / 9)));
@@ -405,9 +457,10 @@
   }
 
   function lampadaire(lueurs) {
-    blocs([[260, 98, 18, 10]], '#f2c38a'); r(261, 98, 16, 2, '#ffe0b0'); r(260, 106, 18, 2, '#d79a5c');
-    r(262, 97, 14, 1, '#f2c38a');
-    if (mom.voile > 0) lueurs.push([269, 112, 26, '#ffcf8a', 0.16 + mom.voile * 0.25]);
+    const lp = deco.lampe || {};
+    blocs([[260, 98, 18, 10]], lp.a || '#f2c38a'); r(261, 98, 16, 2, lp.b || '#ffe0b0'); r(260, 106, 18, 2, lp.c || '#d79a5c');
+    r(262, 97, 14, 1, lp.a || '#f2c38a');
+    if (mom.voile > 0) lueurs.push([269, 112, 26, lp.lueur || '#ffcf8a', 0.16 + mom.voile * 0.25]);
   }
 
   // ================= PERSONNAGES =================
@@ -650,6 +703,17 @@
     }
   }
 
+  // Rappels KinanEquipe.corpsDe d'un agent ; un rappel qui lève est retiré seul (la scène continue).
+  function perso(k, quoi, args) {
+    const l = persos[k];
+    if (!l || !l.length) return false;
+    for (const o of l.slice()) {
+      if (typeof o[quoi] !== 'function') continue;
+      try { if (o[quoi](g, ...args) && quoi === 'corps') return true; } catch (e) { const i = l.indexOf(o); if (i >= 0) l.splice(i, 1); }
+    }
+    return false;
+  }
+
   function agent(a, t, lueurs, bulles) {
     const e = etats[a.cle];
     const p = pose(a, t);
@@ -658,7 +722,7 @@
     chaise(a, a.haut - a.ry + 2);
     if (a.aura && e.etat === 'travail') aura(a, t, cy);
     // lueur de l'écran sur le personnage
-    corps(a, cx, cy, p);
+    if (!perso(a.cle, 'corps', [a, cx, cy, p, t])) corps(a, cx, cy, p);
     if (a.aura && e.etat === 'travail') etincelles(a, t, cy);
     if (e.etat === 'erreur' && !calme) { // goutte de sueur
       const ph = ((t - a.anim.depuis) % 1400) / 1400;
@@ -679,6 +743,7 @@
     }
     if (p.marteau) main(p.marteau[0], p.marteau[1], a); else main(a.cx - 7, y + g1, a);
     main(a.cx + 3, y + g2, a);
+    perso(a.cle, 'devant', [a, t]);
     // bulles (dessinées plus tard, par-dessus tout)
     const sommet = cy - a.ry - (a.cle === 'johms' ? 6 : a.cle === 'drafion' ? 5 : a.cle === 'skyze' ? 4 : 2);
     if (p.bulle) bulles.push([a, p.bulle, sommet, t - a.anim.depuis]);
@@ -748,14 +813,15 @@
 
   let reaction = null;
 
-  // ---- clones : exemplaires multiples d'un même agent (petite réplique translucide avec son mini-bureau) ----
-  // Emplacements (x, dans les zones libres du décor, à la hauteur du bureau de l'agent) : 3 par agent au maximum.
-  // [x, décalage vertical] : aucun emplacement n'est partagé entre deux agents (bords et espaces entre les bureaux).
-  const EMPL = {
-    drafion: [[15, 0], [119, 0], [119, 26]], kinan: [[143, 0], [255, 0], [143, 26]], skyze: [[385, 0], [280, 0], [280, 26]],
-    johms: [[15, 0], [121, 0], [15, 26]], quatre: [[149, 0], [251, 0], [149, 26]], cinq: [[385, 0], [279, 0], [385, 26]]
-  };
+  // ---- doubles : exemplaires multiples d'un même agent (petite réplique translucide avec son mini-bureau) ----
+  // Emplacements calculés par src/placement-logique.js : grille de positions libres (hors bureaux, écrans, objets du décor, lampadaire, plante
+  // déplacée par le panneau Royaume, bornes de la scène), jamais deux doubles au même endroit. Un nouveau double marche depuis le bureau de son
+  // agent jusqu'à son emplacement par un trajet qui contourne les obstacles (mouvement réduit : il apparaît directement).
   const MAX_CLONES = 3;
+  const PL = window.PlacementLogique || null;
+  const VITESSE_MARCHE = 80; // pixels de scène par seconde
+  const masques = {};        // agents masqués par le panneau Royaume (affichage seulement : l'état réel de l'agent ne change pas)
+  const doubles = { sig: '', places: {}, manques: {} }; // places : { cle: [{ x, y, chemin, longueur, t0, arrive }] }
   const spritesClone = {}, comp = document.createElement('canvas');
   comp.width = 32; comp.height = 36;
   function spriteClone(k) {
@@ -767,13 +833,64 @@
     return spritesClone[k];
   }
   const nbClones = (k) => (etats[k].instances.length >= 2 ? etats[k].instances.length - 1 : 0);
-  function clonesDessin(t) {
+  const visibles = () => CLES.filter((k) => !masques[k]);
+  function entreeObstacles() {
+    const dec = {}; for (const id of Object.keys(deco.dec)) dec[id] = deco.dec[id];
+    return { agents: visibles().map((k) => ({ cle: k, cx: AGENTS[k].cx, haut: AGENTS[k].haut, banc: !!AGENTS[k].banc })),
+      objets: window.KinanEquipe.objets, decalages: dec, planteRemplacee: !!deco.rempl.plante };
+  }
+  // Recalcule les emplacements quand quelque chose change (nombre de doubles, agent masqué, décor déplacé, plante remplacée).
+  function recalculerDoubles(t) {
+    if (!PL) return;
+    const sig = CLES.map((k) => (masques[k] ? 'x' : Math.min(nbClones(k), MAX_CLONES)) + '/' + nbClones(k)).join(',') + '|' + JSON.stringify(deco.dec) + '|' + (deco.rempl.plante ? 1 : 0);
+    if (sig === doubles.sig) return;
+    doubles.sig = sig;
+    const agents = visibles().map((k) => ({ cle: k, cx: AGENTS[k].cx, haut: AGENTS[k].haut, banc: !!AGENTS[k].banc, n: Math.min(nbClones(k), MAX_CLONES) }));
+    const interdits = PL.obstacles(entreeObstacles());
+    const precedent = {}; for (const k of Object.keys(doubles.places)) precedent[k] = doubles.places[k].map((p) => [p.x, p.y]);
+    const res = PL.placer({ agents, interdits, precedent });
+    const ancien = doubles.places; doubles.places = {}; doubles.manques = res.manques;
+    for (const k of Object.keys(res.positions)) {
+      doubles.places[k] = res.positions[k].map(([x, y], i) => {
+        const av = ancien[k] && ancien[k][i];
+        if (av && av.x === x && av.y === y) return av; // inchangé : on garde son état (marche en cours comprise)
+        return { x, y, chemin: null, longueur: 0, t0: t, arrive: true, neuf: !av };
+      });
+    }
+    // Trajets des nouveaux doubles (hors mouvement réduit) : on contourne les bureaux, les objets et les autres doubles déjà posés.
+    if (!calme) for (const k of Object.keys(doubles.places)) doubles.places[k].forEach((p) => {
+      if (!p.neuf) return;
+      p.neuf = false;
+      const autres = []; for (const k2 of Object.keys(doubles.places)) for (const q of doubles.places[k2]) if (q !== p) autres.push({ id: 'double', boite: PL.boiteDouble(q.x, q.y) });
+      const ch = PL.chemin(PL.depart(AGENTS[k]), [p.x, p.y], interdits.concat(autres), ['bureau:' + k]);
+      if (ch && ch.length >= 2) { p.chemin = ch; p.longueur = PL.longueur(ch); p.arrive = p.longueur < 4; p.t0 = t; }
+    });
+    // Badge « +N » : doubles non affichés (plafond atteint, ou pas de place libre) ; posé au-dessus du dernier double affiché.
     for (const k of CLES) {
-      const m = Math.min(nbClones(k), MAX_CLONES);
-      if (!m) continue;
-      const a = AGENTS[k], y = HAUTS[a.rang], actif = etats[k].etat === 'travail';
-      for (let i = 0; i < m; i++) {
-        const [x, dy] = EMPL[k][i];
+      const liste = doubles.places[k] || [], sup = nbClones(k) - liste.length;
+      if (!pluses[k]) continue;
+      pluses[k].hidden = !!masques[k] || sup <= 0 || !liste.length; pluses[k].textContent = sup > 0 ? '+' + sup : '';
+      if (liste.length) { const p = liste[liste.length - 1]; pluses[k].style.left = (p.x / W) * 100 + '%'; pluses[k].style.top = ((p.y - 24) + DY) / H * 100 + '%'; }
+    }
+  }
+  function clonesDessin(t) {
+    recalculerDoubles(t);
+    for (const k of CLES) {
+      if (masques[k]) continue;
+      const liste = doubles.places[k] || [];
+      const a = AGENTS[k], actif = etats[k].etat === 'travail';
+      liste.forEach((p, i) => {
+        // en marche : seulement la silhouette qui avance le long du trajet ; arrivé : tête + mini-bureau
+        if (!p.arrive && p.chemin) {
+          const d = ((t - p.t0) / 1000) * VITESSE_MARCHE;
+          if (d >= p.longueur) p.arrive = true; else {
+            const pt = PL.pointSur(p.chemin, d), pas = Math.floor(t / 130) % 2;
+            g.globalAlpha = 0.78;
+            g.drawImage(spriteClone(k), 0, 0, 44, 44, Math.round(pt[0] - 11), Math.round(pt[1] - 14 - pas), 22, 22);
+            g.globalAlpha = 1;
+            return;
+          }
+        }
         const haut = g; g = comp.getContext('2d');
         g.clearRect(0, 0, 32, 36);
         const bob = (!calme && actif && Math.floor(t / (300 / a.vif) + i) % 2) ? 1 : 0;
@@ -783,9 +900,9 @@
         r(20, 17, 7, 5, K); r(21, 18, 5, 3, actif && (calme || Math.floor(t / 400 + i) % 2) ? a.ui : '#4a4468');
         g = haut;
         g.globalAlpha = 0.78;
-        g.drawImage(comp, x - 16, y + dy - 21);
+        g.drawImage(comp, p.x - 16, p.y - 21);
         g.globalAlpha = 1;
-      }
+      });
     }
   }
 
@@ -806,9 +923,23 @@
   const enseigne = { visible: false, depuis: -1e9 };
   document.addEventListener('kinan-tokenout', (e) => {
     const v = !!(e.detail && e.detail.visible);
-    if (v && !enseigne.visible) enseigne.depuis = performance.now();
+    if (v && !enseigne.visible) { enseigne.depuis = performance.now(); if (e.detail.flash) flashImpact(); }
     enseigne.visible = v; sale = true;
   });
+  // Flash d'impact (CSS, #tk-flash dans index.html) : une seule fois par limite atteinte, calé sur le premier choc de l'enseigne (~250 ms).
+  // Mouvement réduit / mode calme : liseré rouge fixe et bref, sans clignotement (photosensibilité).
+  const flashEl = document.getElementById('tk-flash');
+  let flashT1 = 0, flashT2 = 0;
+  function flashImpact() {
+    if (!flashEl) return;
+    clearTimeout(flashT1); clearTimeout(flashT2);
+    const jouer = () => {
+      flashEl.hidden = false; flashEl.classList.remove('on', 'calme'); void flashEl.offsetWidth;
+      flashEl.classList.add(calme ? 'calme' : 'on');
+      flashT2 = setTimeout(() => { flashEl.classList.remove('on', 'calme'); flashEl.hidden = true; }, calme ? 450 : 320);
+    };
+    if (calme) jouer(); else flashT1 = setTimeout(jouer, 250);
+  }
   const rebond = (p) => { // easeOutBounce
     const n = 7.5625, d = 2.75;
     if (p < 1 / d) return n * p * p;
@@ -878,9 +1009,10 @@
     ciel(t);
     horloge();
     plante(t);
+    for (const fn of deco.avant.slice()) { try { fn(g, t); } catch (e) { const i = deco.avant.indexOf(fn); if (i >= 0) deco.avant.splice(i, 1); } }
     const lueurs = [], bulles = [];
     lampadaire(lueurs);
-    for (const k of ORDRE) agent(AGENTS[k], t, lueurs, bulles);
+    for (const k of ORDRE) if (!masques[k]) agent(AGENTS[k], t, lueurs, bulles);
     clonesDessin(t);
     lumieres(lueurs);
     const lueursG = [];
@@ -888,6 +1020,7 @@
     if (mom.voile > 0) { g.globalCompositeOperation = 'lighter'; for (const [x, y, rr, c, al] of lueursG) { g.globalAlpha = al * mom.voile * 1.6; ovale(x + 0.5, y + 0.5, rr, rr, c); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
     for (const b of bulles) bulle(b, t);
     enseigneDessin(t);
+    for (const fn of superposes.slice()) { try { fn(g, t); } catch (e) { const i = superposes.indexOf(fn); if (i >= 0) superposes.splice(i, 1); } }
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
 
@@ -908,8 +1041,6 @@
     // Badge « +N » au-delà de 3 clones visibles
     const plus = document.createElement('div');
     plus.className = 'clone-plus'; plus.hidden = true;
-    plus.style.left = (EMPL[k][MAX_CLONES - 1][0] / W) * 100 + '%';
-    plus.style.top = ((HAUTS[a.rang] + EMPL[k][MAX_CLONES - 1][1] - 24) + DY) / H * 100 + '%';
     cadre.appendChild(plus); pluses[k] = plus;
     // Zone cliquable sur le personnage (et son bureau) : ouvre le détail de l'agent.
     const z = document.createElement('div');
@@ -925,6 +1056,13 @@
     z.addEventListener('click', () => basculerDetail(k, true)); // détail dans le panneau, sans nouvelle fenêtre
     cadre.appendChild(z);
   });
+  // Applique les agents masqués aux éléments HTML (plaques, zones cliquables) et au décor (ombres) ; prévient les autres modules.
+  function majAffichage() {
+    CLES.forEach((k) => { const cache = !!masques[k]; plaques[k].style.display = cache ? 'none' : ''; zones[k].style.display = cache ? 'none' : ''; });
+    try { decor(); } catch { /* décor inchangé */ }
+    sale = true;
+    try { document.dispatchEvent(new CustomEvent('kinan-affichage', { detail: { masques: Object.keys(masques) } })); } catch { /* sans évènement */ }
+  }
   function ajuster() {
     const dpr = window.devicePixelRatio || 1;
     const lw = zone.clientWidth - 16, lh = zone.clientHeight - 16;
@@ -939,6 +1077,17 @@
   new ResizeObserver(ajuster).observe(zone);
   window.addEventListener('resize', ajuster);
   ajuster();
+  // Réajustements après le premier rendu (la fenêtre s'ouvre parfois maximisée, sur un autre écran, avant les polices) :
+  // fin du chargement, polices prêtes, et changement de densité de pixels (déplacement vers un écran de facteur d'échelle différent).
+  window.addEventListener('load', ajuster);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajuster).catch(() => {});
+  (function surveillerDpr() {
+    try {
+      const mqd = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+      const f = () => { ajuster(); surveillerDpr(); };
+      if (mqd.addEventListener) mqd.addEventListener('change', f, { once: true });
+    } catch { /* sans surveillance */ }
+  })();
 
   // ================= PANNEAU =================
   const equipe = document.getElementById('equipe');
@@ -1024,7 +1173,6 @@
     const nExemp = e.instances.length >= 2 ? e.instances.length : 0;
     c.badge.hidden = !nExemp; c.badge.textContent = nExemp ? '×' + nExemp : ''; c.badge.title = nExemp ? nExemp + ' exemplaires de ' + a.nom + ' travaillent en même temps' : '';
     plaques[k]._clone.textContent = nExemp ? '×' + nExemp : ''; plaques[k].dataset.clone = nExemp ? '1' : '';
-    const sup = nbClones(k) - MAX_CLONES; pluses[k].hidden = sup <= 0; pluses[k].textContent = sup > 0 ? '+' + sup : '';
     const tachePlaque = (e.etat !== 'repos' && e.tache && e.tache !== 'Au travail…') ? e.tache : '';
     plaques[k]._tache.textContent = tachePlaque; plaques[k].title = tachePlaque; zones[k].title = 'Voir le détail de ' + a.nom + (tachePlaque ? ' : ' + tachePlaque : ''); plaques[k].dataset.avecTache = tachePlaque ? '1' : '';
     if (e.etat !== 'repos' && e.tache) { c.tache.textContent = e.tache; c.tache.className = 'tache'; }
