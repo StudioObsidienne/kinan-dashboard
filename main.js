@@ -26,13 +26,17 @@ const vues = (cle) => { if (!erreursVues.has(cle)) erreursVues.set(cle, new Map(
 // Conversation affichée : « recente » (défaut : suit la plus récente, comme en 0.3.1), « toutes », ou un identifiant du registre.
 let sessionChoisie = 'recente';
 
+// Cache mtime+taille (lecture-cache.js) : state.json, sessions.json, sessions/<sid>.json et reglages.json ne sont relus que s'ils changent.
+const cacheLecture = require('./lecture-cache').creer();
+const lireJson = (f) => { const r = cacheLecture.lire(f, JSON.parse); return r ? r.valeur : undefined; };
 function lireRegistre() {
-  try { const d = JSON.parse(fs.readFileSync(path.join(DOSSIER_ETAT, 'sessions.json'), 'utf8')); return d && typeof d === 'object' && !Array.isArray(d) ? d : {}; } catch { return {}; }
+  const d = lireJson(path.join(DOSSIER_ETAT, 'sessions.json'));
+  return d && typeof d === 'object' && !Array.isArray(d) ? d : {};
 }
 // Conversations vivantes du registre, avec l'état de chacune (sessions/<sid>.json).
 function sessionsVivantes(now = Date.now()) {
   const reg = lireRegistre(), etats = {};
-  for (const id of Object.keys(reg)) { const e = sessionsEtat.etatSession(DOSSIER_ETAT, id); if (e) etats[id] = e; }
+  for (const id of Object.keys(reg)) { const e = sessionsEtat.etatSession(DOSSIER_ETAT, id, cacheLecture); if (e) etats[id] = e; }
   return { reg, etats, liste: sessionsEtat.listerSessions(reg, lireReglages().libellesSessions, now, etats) };
 }
 // Agents absents d'un fichier de conversation : au repos (sinon l'interface garderait l'état de la vue précédente).
@@ -41,7 +45,8 @@ const completer = (etat) => { for (const id of config.ids()) if (!etat.agents[id
 // state.json : miroir de la dernière conversation active (plugin 0.3.0), ou état unique (plugin 0.2.2).
 function lireEtatMiroir() {
   try {
-    const etat = JSON.parse(fs.readFileSync(FICHIER_ETAT, 'utf8'));
+    const etat = lireJson(FICHIER_ETAT); // copie : appliquerDelais la modifie, sans toucher au cache
+    if (etat === undefined) return ETAT_PAR_DEFAUT; // absent ou illisible
     if (!etat || typeof etat !== 'object' || Array.isArray(etat)) return ETAT_PAR_DEFAUT; // fichier corrompu (null, tableau…)
     // Délais (erreur 20 s puis repos, abandon 15 min) : voir etat-delai.js ; calculés à chaque lecture, donc sans attendre un évènement.
     appliquerDelais(etat, Date.now(), vues('recente'));
@@ -64,7 +69,7 @@ function lireEtatFusion() {
 function lireEtat() {
   if (sessionChoisie === 'recente' || !fs.existsSync(DOSSIER_SESSIONS)) return lireEtatMiroir();
   if (sessionChoisie === 'toutes') return lireEtatFusion();
-  const e = sessionsEtat.etatSession(DOSSIER_ETAT, sessionChoisie) || { agents: {} };
+  const e = sessionsEtat.etatSession(DOSSIER_ETAT, sessionChoisie, cacheLecture) || { agents: {} };
   return completer(appliquerDelais(e, Date.now(), vues(sessionChoisie)));
 }
 // Conversation suivie par le relais : la choisie ; « Toutes » : la plus récente du registre ; sinon celle de state.json.
@@ -79,7 +84,7 @@ function conversationSuivie() {
 
 // Taille et position de la fenêtre principale : mémorisées dans reglages.json (clé « fenetre »).
 const FICHIER_REGLAGES = path.join(DOSSIER_ETAT, 'reglages.json');
-function lireReglages() { try { return JSON.parse(fs.readFileSync(FICHIER_REGLAGES, 'utf8')) || {}; } catch { return {}; } }
+function lireReglages() { return lireJson(FICHIER_REGLAGES) || {}; } // copie : session:renommer la modifie avant de la réécrire
 function boundsMemorises() {
   try { return boundsMemorisesBrut(); } catch { return {}; }
 }
@@ -147,7 +152,7 @@ function creerFenetre() {
 
   // Envoi de l'état une fois par seconde, seulement s'il a changé.
   let dernier = '';
-  const minuteur = setInterval(() => {
+  const envoyerEtat = () => {
     if (fenetre.isDestroyed()) return;
     const { transcript: _journal, ...pourRendu } = lireEtat(); // le rendu ne reçoit jamais le chemin du journal
     const brut = JSON.stringify(pourRendu);
@@ -155,10 +160,22 @@ function creerFenetre() {
       dernier = brut;
       fenetre.webContents.send('etat', JSON.parse(brut));
     }
-  }, 1000);
+  };
+  // Pause du minuteur fenêtre masquée ou réduite ; à la réapparition (show/restore/focus) : renvoi immédiat de l'état.
+  // Le son, les alertes et la fenêtre question ont leurs propres lectures et ne dépendent pas de ce minuteur.
+  let minuteur = null;
+  const demarrerMinuteur = () => { if (!minuteur) minuteur = setInterval(envoyerEtat, 1000); };
+  const arreterMinuteur = () => { clearInterval(minuteur); minuteur = null; };
+  const reprendre = () => { if (fenetre.isDestroyed()) return; dernier = ''; demarrerMinuteur(); envoyerEtat(); };
+  demarrerMinuteur();
+  fenetre.on('hide', arreterMinuteur);
+  fenetre.on('minimize', arreterMinuteur);
+  fenetre.on('show', reprendre);
+  fenetre.on('restore', reprendre);
+  fenetre.on('focus', reprendre);
   // Fermer la fenêtre principale quitte vraiment l'appli (les fenêtres cachées du son et du détail ne la gardent plus en vie :
   // sinon un processus invisible gardait le verrou et empêchait de relancer Kinan Orchestre).
-  fenetre.on('closed', () => { clearInterval(minuteur); app.quit(); });
+  fenetre.on('closed', () => { arreterMinuteur(); app.quit(); });
 }
 
 // Test de démarrage (test/demarrage.test.js) : KINAN_TEST_DEMARRAGE=1 ouvre la fenêtre, attend le chargement de la page,

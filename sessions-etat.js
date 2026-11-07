@@ -48,10 +48,15 @@ function listerSessions(registre, libelles, now, etats = {}) {
 }
 
 // État d'une conversation (sessions/<sid>.json), ou null si l'identifiant est invalide ou le fichier absent/illisible.
-function etatSession(dossier, sid) {
+// `cache` (lecture-cache.js, facultatif) : le fichier n'est relu que s'il a changé ; l'appelant reçoit toujours une copie.
+function etatSession(dossier, sid, cache) {
   if (typeof sid !== 'string' || !SID_VALIDE.test(sid)) return null;
   try {
-    const e = JSON.parse(fs.readFileSync(path.join(dossier, 'sessions', sid + '.json'), 'utf8').replace(/^﻿/, ''));
+    const f = path.join(dossier, 'sessions', sid + '.json');
+    const analyser = (t) => JSON.parse(t.replace(/^﻿/, ''));
+    let e;
+    if (cache) { const r = cache.lire(f, analyser); if (!r) return null; e = r.valeur; }
+    else e = analyser(fs.readFileSync(f, 'utf8'));
     if (!objet(e)) return null;
     if (!objet(e.agents)) e.agents = {};
     return e;
