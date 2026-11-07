@@ -614,6 +614,8 @@
       sur(bPasser, 'click', () => terminer('passer'));
       sur(doc, 'keydown', (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); terminer('passer'); } }, true);
       sur(bSon, 'click', () => { S.son = !S.son; majSon(); if (S.son) musique(); else volumeAudio(); });
+      // Suit en direct le bouton son permanent (évènement kinan-egg-muet) ; ne touche pas au volume.
+      sur(doc, 'kinan-egg-muet', (ev) => { const m = ev && ev.detail && typeof ev.detail.muet === 'boolean' ? ev.detail.muet : api.muet(); if (S.son === !m) return; S.son = !m; majSon(); if (S.son) musique(); else volumeAudio(); });
       sur(vol, 'input', () => { S.volume = L.borneVolume(Number(vol.value) / 100); api.stock.set('volume', S.volume); volumeAudio(); });
       sur(cible, 'mouseenter', () => montrerFiche(true));
       sur(cible, 'mouseleave', () => { if (!S.fiche) montrerFiche(false); });

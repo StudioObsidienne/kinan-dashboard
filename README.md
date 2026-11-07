@@ -27,6 +27,8 @@ npm start
 
 On Windows, `lancer-kinan-os.cmd` runs the same two steps.
 
+On Windows the app also (re)creates the Desktop / Start menu shortcut "Kinan Orchestre" at each start (silent, `outils/raccourci.ps1`), so it exists after a plain `git pull` and relaunch.
+
 If `npm start` reports that Electron failed to install (some npm versions skip install scripts), run `node node_modules/electron/install.js` once, then `npm start` again.
 
 `npm install` also installs the three mail libraries used by the optional Mail tab (`imapflow`, `nodemailer`, `mailparser`, pinned versions). They are loaded only after you enable that tab.

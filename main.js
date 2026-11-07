@@ -147,8 +147,8 @@ app.on('second-instance', () => {
   const w = fenetrePrincipale;
   if (!w || w.isDestroyed()) { if (app.isReady()) creerFenetre(); return; } // fenêtre principale absente : on la recrée
 
-  if (w.isMinimized()) w.restore();
-  else if (!w.isVisible()) w.showInactive();
+  // Déjà lancé : on ne touche à rien (ni restauration, ni focus). Seule une fenêtre cachée par erreur est remontrée, sans focus.
+  if (!w.isVisible() && !w.isMinimized()) w.showInactive();
 });
 
 // Zéro réseau : toute requête http, https, ws ou wss est annulée ; aucune fenêtre ne peut en ouvrir une autre ni naviguer ailleurs.
@@ -165,6 +165,8 @@ app.setAppUserModelId('kinan-os.dashboard');
 app.whenReady().then(() => {
   if (!app.hasSingleInstanceLock()) return; // second lancement : on quitte sans rien exécuter
   bloquerReseau();
+  // Raccourci Bureau / menu Démarrer (AUMID kinan-os.dashboard) : recréé en silence à chaque démarrage (idempotent), sans bloquer, erreurs ignorées.
+  if (!TEST_DEMARRAGE) require('./raccourci-demarrage').lancer(process.platform, __dirname);
   // Configuration (lecture seule) : thème, noms et couleurs des agents, sous-titre. Relue à chaque chargement de page.
   ipcMain.on('config:lire', (e) => { e.returnValue = config.charger(true); });
   // Logo du tableau au mur : fichier local de l'utilisateur (aucun téléchargement de theme.logo : zéro réseau).

@@ -52,6 +52,7 @@ const EXCEPTIONS = {
   'test/demarrage.test.js': ['processus externe'],
   'mise-a-jour.js': ['module réseau', 'processus externe'],
   'outils/statusline-limites.js': ['processus externe'],
+  'raccourci-demarrage.js': ['processus externe'],
   'courrier.js': ['processus externe', 'bibliothèque de messagerie']
 };
 const DEPS_COURRIER = ['imapflow', 'mailparser', 'nodemailer'];

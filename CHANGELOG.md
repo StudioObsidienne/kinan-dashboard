@@ -2,6 +2,9 @@
 
 Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il sera fixé à la publication.
 
+## [À venir]
+- Jean suit en direct le bouton son ; le raccourci Bureau / menu Démarrer est aussi recréé au démarrage de l'appli (Windows, silencieux), plus seulement via `lancer-kinan-os.cmd`.
+
 ## [0.3.0] — 2026-11-07 — Drafion's Awakening
 
 ### Corrigé (finitions)
