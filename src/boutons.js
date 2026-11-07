@@ -110,30 +110,115 @@
   setInterval(rendre, 5000);
 })();
 
-// Bulles « autres projets » : travail des autres conversations Claude en temps réel (sessions.json, mis à jour par les hooks).
+// Barre de pastilles : une pastille par conversation Claude Code (plugin 0.3.0). Cliquer affiche les agents de cette conversation.
+// « Récente » (défaut) suit la conversation la plus récente, comme avant ; « Toutes » fusionne. Affichée seulement à partir de 2 conversations.
+// Le rendu ne reçoit que { id, libelle, etat, actifs, maj } par conversation. 0 jeton.
 (() => {
   const zone = document.getElementById('sess-bulles'), api = window.kinanUI;
   if (!zone) return;
-  let sessions = {};
-  function rendre() {
-    const now = Date.now();
-    const liste = Object.values(sessions).filter((s) => s && s.maj && now - s.maj < 15 * 60000).sort((a, b) => b.maj - a.maj);
-    // La plus récente = la conversation en cours (déjà dans la boîte). Les autres : bulle seulement si elles travaillent encore
-    // (une conversation au repos disparaît ; « travail » sans nouvelle depuis 5 min = abandonnée, on la masque).
-    const autres = liste.slice(1).filter((s) => s.etat === 'doute' || s.etat === 'erreur' || (s.etat === 'travail' && now - s.maj < 5 * 60000));
-    zone.textContent = '';
-    for (const s of autres.slice(0, 4)) {
-      const b = document.createElement('div'); b.className = 'sess-bulle ' + (s.etat || 'repos');
-      const p = document.createElement('i'); p.className = 'pt';
-      const t = document.createElement('span'); t.className = 't';
-      const n = document.createElement('b'); n.textContent = String(s.titre || s.projet || 'Conversation');
-      const sec = Math.round((now - s.maj) / 1000), ago = sec < 60 ? sec + ' s' : Math.round(sec / 60) + ' min';
-      t.append(n, ' · ' + ((String(s.tache || '') || 'au travail') + ' · ' + ago));
-      b.append(p, t); zone.append(b);
+  const MAX = 5; // au-delà : pastille « +n »
+  const ORDRE = { erreur: 3, doute: 2, travail: 1, repos: 0 };
+  const NOM_ETAT = { erreur: 'erreur', doute: 'en attente', travail: 'au travail', repos: 'au repos' };
+  let donnees = { choisie: 'recente', sessions: [] }, deplie = false, edition = null, focusId = null;
+  const groupe = document.createElement('div');
+  groupe.className = 'sb-groupe'; groupe.setAttribute('role', 'radiogroup'); groupe.setAttribute('aria-label', 'Conversations');
+  const plus = document.createElement('button');
+  plus.type = 'button'; plus.className = 'sb-plus'; plus.setAttribute('aria-expanded', 'false'); plus.hidden = true;
+  const annonce = document.createElement('span');
+  annonce.className = 'sb-cache'; annonce.setAttribute('aria-live', 'polite');
+  zone.append(groupe, plus);
+  zone.after(annonce); // hors de la barre masquée : l'annonce de repli reste lue
+
+  const pire = (liste) => liste.reduce((m, s) => (ORDRE[s.etat] > ORDRE[m] ? s.etat : m), 'repos');
+  const cache = (t) => Object.assign(document.createElement('span'), { className: 'sb-cache', textContent: t });
+  function pastille(id, libelle, etat, actifs, titre) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'sb-pastille ' + (ORDRE[etat] !== undefined ? etat : 'repos'); b.dataset.id = id;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(id === donnees.choisie));
+    if (titre) b.title = titre;
+    const pt = document.createElement('i'); pt.className = 'pt'; pt.setAttribute('aria-hidden', 'true');
+    const t = document.createElement('span'); t.className = 'lib'; t.textContent = libelle;
+    b.append(pt, t, cache(', ' + (NOM_ETAT[etat] || NOM_ETAT.repos)));
+    if (actifs > 0) {
+      const n = document.createElement('span'); n.className = 'n'; n.setAttribute('aria-hidden', 'true'); n.textContent = String(actifs);
+      b.append(n, cache(', ' + actifs + (actifs > 1 ? ' agents au travail' : ' agent au travail')));
     }
+    return b;
   }
-  const appliquer = (d) => { sessions = d || {}; rendre(); };
-  if (/[?&]relais=1/.test(location.search)) appliquer({ a: { projet: 'ce-projet', etat: 'repos', maj: Date.now() }, b: { projet: 'x', titre: 'Documentation', etat: 'travail', tache: 'skyze : guide d\'installation', maj: Date.now() - 20000 }, c: { projet: 'x', titre: 'Revue de code', etat: 'doute', tache: "J'attends ton feu vert", maj: Date.now() - 90000 } });
+  function rendre() {
+    if (edition) return; // renommage en cours : on ne redessine pas sous le curseur
+    const sessions = donnees.sessions || [];
+    zone.hidden = sessions.length < 2;
+    if (zone.hidden) { groupe.textContent = ''; plus.hidden = true; return; }
+    const recente = [...sessions].sort((a, b) => b.maj - a.maj)[0];
+    const total = sessions.reduce((n, s) => n + (s.actifs || 0), 0);
+    let visibles = deplie ? sessions : sessions.slice(0, MAX);
+    const choisie = sessions.find((s) => s.id === donnees.choisie);
+    if (choisie && !visibles.includes(choisie)) visibles = [...visibles.slice(0, MAX - 1), choisie];
+    const items = [
+      pastille('recente', 'Récente', recente.etat, recente.actifs, 'Suit la conversation la plus récente (' + recente.libelle + ')'),
+      pastille('toutes', 'Toutes', pire(sessions), total, 'Agents de toutes les conversations'),
+      ...visibles.map((s) => pastille(s.id, s.libelle, s.etat, s.actifs, 'Double-clic : renommer'))
+    ];
+    const actif = zone.contains(document.activeElement) && document.activeElement.dataset ? document.activeElement.dataset.id : null;
+    groupe.replaceChildren(...items);
+    // Tabulation : une seule pastille atteignable (celle qui a le focus, sinon la choisie) ; flèches pour les autres.
+    const cible = items.find((b) => b.dataset.id === focusId) || items.find((b) => b.dataset.id === donnees.choisie) || items[0];
+    for (const b of items) b.tabIndex = b === cible ? 0 : -1;
+    if (actif) { const b = items.find((x) => x.dataset.id === actif); if (b) b.focus(); }
+    const caches = sessions.length - visibles.length;
+    plus.hidden = sessions.length <= MAX;
+    plus.textContent = deplie ? 'Moins' : '+' + caches;
+    plus.setAttribute('aria-expanded', String(deplie));
+    plus.setAttribute('aria-label', deplie ? 'Réduire la liste des conversations' : caches + ' autres conversations');
+  }
+  const choisir = (id) => {
+    if (!api || !api.sessionChoisir) return;
+    focusId = id;
+    api.sessionChoisir(id).then((r) => { if (r && r.ok) { donnees.choisie = r.choisie; rendre(); } }).catch(() => {});
+  };
+  groupe.addEventListener('click', (e) => { const b = e.target.closest('.sb-pastille'); if (b && !edition) choisir(b.dataset.id); });
+  groupe.addEventListener('keydown', (e) => {
+    if (edition || !['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+    const items = [...groupe.querySelectorAll('.sb-pastille')];
+    const i = items.indexOf(document.activeElement);
+    if (i < 0) return;
+    e.preventDefault();
+    const j = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + items.length) % items.length;
+    for (const b of items) b.tabIndex = -1;
+    items[j].tabIndex = 0; items[j].focus(); focusId = items[j].dataset.id;
+  });
+  // Double-clic : renommer (Entrée valide, Échap annule ; vide : nom du dossier). Enregistré par le processus principal.
+  groupe.addEventListener('dblclick', (e) => {
+    const b = e.target.closest('.sb-pastille');
+    if (!b || b.dataset.id === 'recente' || b.dataset.id === 'toutes' || !api || !api.sessionRenommer) return;
+    const s = (donnees.sessions || []).find((x) => x.id === b.dataset.id);
+    if (!s) return;
+    edition = s.id;
+    const champ = Object.assign(document.createElement('input'), { type: 'text', value: s.libelle, maxLength: 40, className: 'sb-champ' });
+    champ.setAttribute('aria-label', 'Nom de la conversation');
+    const finir = (garder) => {
+      if (!edition) return;
+      const id = edition; edition = null;
+      if (garder && champ.value.trim() !== s.libelle) api.sessionRenommer(id, champ.value).catch(() => {});
+      rendre();
+      const nb = groupe.querySelector('[data-id="' + CSS.escape(id) + '"]'); if (nb) nb.focus();
+    };
+    champ.addEventListener('keydown', (k) => { k.stopPropagation(); if (k.key === 'Enter') finir(true); else if (k.key === 'Escape') finir(false); });
+    champ.addEventListener('blur', () => finir(true));
+    champ.addEventListener('click', (k) => k.stopPropagation());
+    b.replaceWith(champ); champ.focus(); champ.select();
+  });
+  plus.addEventListener('click', () => { deplie = !deplie; rendre(); });
+  const appliquer = (d) => {
+    if (!d || !Array.isArray(d.sessions)) d = { choisie: 'recente', sessions: [] }; // format inconnu ou illisible : barre masquée
+    if (d.repli) annonce.textContent = 'Conversation fermée : retour à la plus récente.';
+    donnees = d; rendre();
+  };
+  if (/[?&]relais=1/.test(location.search)) appliquer({ choisie: 'recente', sessions: [ // ?demo=1&relais=1 : affichage forcé (captures)
+    { id: 'demo-a', libelle: 'site', etat: 'travail', actifs: 2, maj: Date.now() - 20000 },
+    { id: 'demo-b', libelle: 'site · 2', etat: 'doute', actifs: 0, maj: Date.now() - 90000 },
+    { id: 'demo-c', libelle: 'documentation', etat: 'repos', actifs: 0, maj: Date.now() - 300000 } ] });
   else if (api && api.sessionsLire) { api.sessionsLire().then(appliquer).catch(() => {}); if (api.surSessions) api.surSessions(appliquer); }
-  setInterval(rendre, 5000);
 })();

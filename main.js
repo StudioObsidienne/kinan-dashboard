@@ -17,18 +17,64 @@ const DOSSIER_ETAT = config.DOSSIER;
 const FICHIER_ETAT = path.join(DOSSIER_ETAT, 'state.json');
 
 const { appliquerDelais } = require('./etat-delai');
-const erreursVues = new Map();
+const sessionsEtat = require('./sessions-etat');
+const DOSSIER_SESSIONS = path.join(DOSSIER_ETAT, 'sessions'); // écrit par le plugin 0.3.0 ; absent avec le plugin 0.2.2
 const ETAT_PAR_DEFAUT = { agents: Object.fromEntries(config.ids().map((id) => [id, { etat: 'repos', tache: '' }])) };
+// Erreurs vues sans horodatage (etat-delai.js) : une Map par vue (« recente », « toutes », ou identifiant de conversation).
+const erreursVues = new Map();
+const vues = (cle) => { if (!erreursVues.has(cle)) erreursVues.set(cle, new Map()); return erreursVues.get(cle); };
+// Conversation affichée : « recente » (défaut : suit la plus récente, comme en 0.3.1), « toutes », ou un identifiant du registre.
+let sessionChoisie = 'recente';
 
-function lireEtat() {
+function lireRegistre() {
+  try { const d = JSON.parse(fs.readFileSync(path.join(DOSSIER_ETAT, 'sessions.json'), 'utf8')); return d && typeof d === 'object' && !Array.isArray(d) ? d : {}; } catch { return {}; }
+}
+// Conversations vivantes du registre, avec l'état de chacune (sessions/<sid>.json).
+function sessionsVivantes(now = Date.now()) {
+  const reg = lireRegistre(), etats = {};
+  for (const id of Object.keys(reg)) { const e = sessionsEtat.etatSession(DOSSIER_ETAT, id); if (e) etats[id] = e; }
+  return { reg, etats, liste: sessionsEtat.listerSessions(reg, lireReglages().libellesSessions, now, etats) };
+}
+// Agents absents d'un fichier de conversation : au repos (sinon l'interface garderait l'état de la vue précédente).
+const completer = (etat) => { for (const id of config.ids()) if (!etat.agents[id]) etat.agents[id] = { etat: 'repos', tache: '' }; return etat; };
+
+// state.json : miroir de la dernière conversation active (plugin 0.3.0), ou état unique (plugin 0.2.2).
+function lireEtatMiroir() {
   try {
     const etat = JSON.parse(fs.readFileSync(FICHIER_ETAT, 'utf8'));
+    if (!etat || typeof etat !== 'object' || Array.isArray(etat)) return ETAT_PAR_DEFAUT; // fichier corrompu (null, tableau…)
     // Délais (erreur 20 s puis repos, abandon 15 min) : voir etat-delai.js ; calculés à chaque lecture, donc sans attendre un évènement.
-    appliquerDelais(etat, Date.now(), erreursVues);
+    appliquerDelais(etat, Date.now(), vues('recente'));
     return etat;
   } catch {
     return ETAT_PAR_DEFAUT;
   }
+}
+// « Toutes » : fusion des conversations vivantes (le son et la fenêtre question l'utilisent toujours). Sans sessions/ : state.json.
+function lireEtatFusion() {
+  if (!fs.existsSync(DOSSIER_SESSIONS)) return lireEtatMiroir();
+  const now = Date.now();
+  const { etats, liste } = sessionsVivantes(now);
+  const avecEtat = liste.filter((s) => etats[s.id]);
+  if (!avecEtat.length) return lireEtatMiroir();
+  const plusieurs = avecEtat.length > 1; // libellé de conversation sur la question seulement s'il y a un choix
+  const fusion = sessionsEtat.fusionner(avecEtat.map((s) => ({ libelle: plusieurs ? s.libelle : '', etat: appliquerDelais(etats[s.id], now, vues(s.id)) })));
+  return completer(appliquerDelais(fusion, now, vues('toutes')));
+}
+function lireEtat() {
+  if (sessionChoisie === 'recente' || !fs.existsSync(DOSSIER_SESSIONS)) return lireEtatMiroir();
+  if (sessionChoisie === 'toutes') return lireEtatFusion();
+  const e = sessionsEtat.etatSession(DOSSIER_ETAT, sessionChoisie) || { agents: {} };
+  return completer(appliquerDelais(e, Date.now(), vues(sessionChoisie)));
+}
+// Conversation suivie par le relais : la choisie ; « Toutes » : la plus récente du registre ; sinon celle de state.json.
+function conversationSuivie() {
+  const reg = lireRegistre();
+  let sid = sessionChoisie;
+  if (sid === 'toutes') { const l = sessionsVivantes().liste.sort((a, b) => b.maj - a.maj); sid = l.length ? l[0].id : 'recente'; }
+  if (sid === 'recente') { const m = lireEtatMiroir(); return { transcript: m.transcript, cwd: (reg[m.session] || {}).cwd || null }; }
+  const s = reg[sid] || {};
+  return { transcript: s.transcript, cwd: s.cwd || null };
 }
 
 // Taille et position de la fenêtre principale : mémorisées dans reglages.json (clé « fenetre »).
@@ -103,7 +149,8 @@ function creerFenetre() {
   let dernier = '';
   const minuteur = setInterval(() => {
     if (fenetre.isDestroyed()) return;
-    const brut = JSON.stringify(lireEtat());
+    const { transcript: _journal, ...pourRendu } = lireEtat(); // le rendu ne reçoit jamais le chemin du journal
+    const brut = JSON.stringify(pourRendu);
     if (brut !== dernier) {
       dernier = brut;
       fenetre.webContents.send('etat', JSON.parse(brut));
@@ -198,9 +245,10 @@ app.whenReady().then(() => {
     note.on('click', () => { const w = fenetrePrincipale; if (w && !w.isDestroyed()) { if (w.isMinimized()) w.restore(); w.show(); w.focus(); } });
     note.show();
   };
-  son.demarrer({ lireEtat, surClone: notifierClone });
-  agentFenetre.enregistrer(lireEtat);
-  question.demarrer({ lireEtat }); // fenêtre « question » quand Kinan est en doute
+  son.demarrer({ lireEtat: lireEtatFusion, surClone: notifierClone }); // clones et sons de toutes les conversations
+  // Détail d'agent : historique et tâches de la conversation choisie (tout en « recente » et « toutes »).
+  agentFenetre.enregistrer(lireEtat, () => (sessionsEtat.estSession(sessionChoisie) ? sessionChoisie : null));
+  question.demarrer({ lireEtat: lireEtatFusion }); // fenêtre « question » quand Kinan est en doute, dans n'importe quelle conversation
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: 'Kinan Orchestre', submenu: [
       { label: 'Gestion (tâches, historique, jetons)', accelerator: 'CmdOrCtrl+G', click: () => gestion.ouvrirGestion() },
@@ -255,18 +303,18 @@ app.whenReady().then(() => {
   // REFAIRE CONVERSATION : conversation la plus récente trop longue (toutes les 60 s, cache par chemin+taille+mtime).
   const cacheRelais = new Map();
   let etatRelais = { actif: false }, reporteJusqua = 0, derniereNotifRelais = 0;
-  const etatRelaisComplet = () => ({ ...etatRelais, reporteJusqua });
+  const etatRelaisComplet = () => { const { id: _chemin, ...r } = etatRelais; return { ...r, reporteJusqua }; }; // sans le chemin du journal
   ipcMain.handle('relais:lire', etatRelaisComplet);
   ipcMain.handle('relais:reporter', () => { reporteJusqua = Date.now() + 20 * 60000; diffuserRelais(); return reporteJusqua; });
   ipcMain.handle('relais:copier', () => { try { clipboard.writeText('/relais'); return { ok: true }; } catch { return { ok: false }; } });
   const diffuserRelais = () => { for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('relais:maj', etatRelaisComplet()); };
   const releverRelais = () => {
     try {
-      const n = relais.detecter({ cache: cacheRelais, fichier: (lireEtat() || {}).transcript });
-      // Dossier de la conversation suivie (registre des sessions tenu par les hooks) : sert à adapter le sous-titre de la fenêtre.
-      try { const sid = (lireEtat() || {}).session; const reg = JSON.parse(fs.readFileSync(path.join(DOSSIER_ETAT, 'sessions.json'), 'utf8')); n.cwd = (reg[sid] || {}).cwd || null; } catch { n.cwd = null; }
-      n.hors = config.horsTravail(n.cwd);
-      const cle = (e) => JSON.stringify([e.actif, e.id, e.titre, e.cwd, e.minutes, e.ctx && Math.round(e.ctx / 1000)]);
+      const suivie = conversationSuivie();
+      const n = relais.detecter({ cache: cacheRelais, fichier: suivie.transcript });
+      // Dossier de la conversation suivie (registre des sessions tenu par les hooks) : sert à adapter le sous-titre ; jamais envoyé au rendu.
+      n.hors = config.horsTravail(suivie.cwd);
+      const cle = (e) => JSON.stringify([e.actif, e.id, e.titre, e.hors, e.minutes, e.ctx && Math.round(e.ctx / 1000)]);
       const change = cle(n) !== cle(etatRelais);
       etatRelais = n;
       const now = Date.now();
@@ -279,21 +327,44 @@ app.whenReady().then(() => {
     } catch { /* ne jamais planter */ }
   };
   releverRelais(); setInterval(releverRelais, 5000);
-  // Autres conversations (projets) en cours : ~/.kinan-os/sessions.json, mis à jour par les hooks. Toutes les 2 s, envoyé si changé.
+  // Conversations en cours (plugin 0.3.0) : barre de pastilles. Toutes les 2 s, envoyé si changé. Sans sessions/ : liste vide.
+  // Le rendu ne reçoit que { id, libelle, etat, actifs, maj } par conversation (sessions-etat.js, chargeRendu) : ni chemin, ni journal.
   const lireSessions = () => {
-    let d = {}; try { d = JSON.parse(fs.readFileSync(path.join(DOSSIER_ETAT, 'sessions.json'), 'utf8')); } catch { return {}; }
-    if (!d || typeof d !== 'object' || Array.isArray(d)) return {}; // fichier corrompu (null, tableau…) : rien à afficher, pas d'exception
-    for (const id of Object.keys(d)) { const s = d[id]; if (!s || typeof s !== 'object') { delete d[id]; continue; } s.titre = (s.transcript && relais.titreConversation(s.transcript)) || ('Conversation ' + id.slice(0, 8)); }
+    let liste = [];
+    try { if (fs.existsSync(DOSSIER_SESSIONS)) liste = sessionsVivantes().liste; } catch { liste = []; }
+    const d = sessionsEtat.chargeRendu(liste, sessionChoisie);
+    sessionChoisie = d.choisie; // conversation choisie disparue : retour à la plus récente
     return d;
   };
   let dernieresSessions = '';
-  ipcMain.handle('sessions:lire', lireSessions);
-  setInterval(() => {
-    const brut = JSON.stringify(lireSessions());
+  const diffuserSessions = () => {
+    const d = lireSessions(), brut = JSON.stringify(d);
     if (brut === dernieresSessions) return;
     dernieresSessions = brut;
-    for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('sessions:maj', JSON.parse(brut));
-  }, 2000);
+    for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('sessions:maj', d);
+  };
+  ipcMain.handle('sessions:lire', () => lireSessions());
+  ipcMain.handle('session:courante', () => sessionChoisie);
+  ipcMain.handle('session:choisir', (_e, id) => {
+    let liste = [];
+    try { if (fs.existsSync(DOSSIER_SESSIONS)) liste = sessionsVivantes().liste; } catch { liste = []; }
+    const ok = sessionsEtat.choixValide(id, liste);
+    if (ok) { sessionChoisie = id; diffuserSessions(); }
+    return { ok, choisie: sessionChoisie };
+  });
+  // Renommage par Jean (double-clic sur une pastille) : reglages.json, clé libellesSessions. Texte vide : nom du dossier.
+  ipcMain.handle('session:renommer', (_e, id, libelle) => {
+    if (typeof id !== 'string' || !sessionsEtat.estSession(id) || !Object.prototype.hasOwnProperty.call(lireRegistre(), id)) return false;
+    try {
+      const r = lireReglages(), t = String(libelle == null ? '' : libelle).replace(/\s+/g, ' ').trim().slice(0, 40);
+      r.libellesSessions = r.libellesSessions && typeof r.libellesSessions === 'object' && !Array.isArray(r.libellesSessions) ? r.libellesSessions : {};
+      if (t) r.libellesSessions[id] = t; else delete r.libellesSessions[id];
+      fs.writeFileSync(FICHIER_REGLAGES, JSON.stringify(r, null, 2));
+    } catch { return false; }
+    diffuserSessions();
+    return true;
+  });
+  setInterval(diffuserSessions, 2000);
   creerFenetre();
 });
 

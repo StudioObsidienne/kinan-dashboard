@@ -40,7 +40,7 @@ function ouvrir(q, cacher) {
   f.loadFile(path.join(__dirname, 'src', 'question.html'));
   f.webContents.once('did-finish-load', () => {
     if (f.isDestroyed()) return;
-    f.webContents.send('question:donnees', { texte: q.texte, options: q.options, son: lireReglages().son !== false });
+    f.webContents.send('question:donnees', { texte: q.texte, options: q.options, session: q.session || '', son: lireReglages().son !== false });
     if (!cacher) f.showInactive(); // sans voler le focus
   });
   f.on('closed', () => { clearTimeout(minuteurMax); if (fenetre === f) fenetre = null; });
@@ -64,7 +64,7 @@ function demarrer({ lireEtat, cacher = false }) {
         if (fenetre && !fenetre.isDestroyed()) return; // déjà affichée
         if (cle === cleAffichee && !fenetre) return;   // expirée (10 min) : pas de répétition
         cleAffichee = cle;
-        ouvrir({ texte: String(q.texte).slice(0, 600), options: (Array.isArray(q.options) ? q.options : []).slice(0, 8).map((o) => String(o).slice(0, 80)) }, cacher);
+        ouvrir({ texte: String(q.texte).slice(0, 600), options: (Array.isArray(q.options) ? q.options : []).slice(0, 8).map((o) => String(o).slice(0, 80)), session: typeof q.session === 'string' ? q.session.slice(0, 40) : '' }, cacher); // session : libellé de la conversation (plusieurs ouvertes)
       } else {
         cleAffichee = null; cleFermee = null;
         if (fenetre) fermer();

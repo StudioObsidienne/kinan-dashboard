@@ -127,7 +127,8 @@ Dossier d'état (`~/.kinan-os/` ou `KINAN_OS_DOSSIER`) :
 |---|---|---|
 | `kinan.config.json` | oui | jamais |
 | `state.json` (états des agents, écrit par le plugin) | oui | créé avec des états au repos s'il manque |
-| `sessions.json` (conversations, écrit par le plugin) | oui | jamais |
+| `sessions.json` (conversations, écrit par le plugin) | oui | jamais (un renommage de conversation va dans `reglages.json`, clé `libellesSessions`) |
+| `sessions/<id>.json` (état de chaque conversation, plugin 0.3.0 et suivants ; absent : `state.json` est lu) | oui | jamais |
 | `historique.jsonl` (journal, écrit par le plugin) | oui | jamais |
 | `taches.json` (tâches) | oui | oui, depuis l'onglet Tâches (avec le verrou `state.lock` du plugin) |
 | `reglages.json` (position de la fenêtre, sons, tarifs, taille du contexte) | oui | oui |

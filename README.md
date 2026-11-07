@@ -144,7 +144,8 @@ State folder (`~/.kinan-os/` or `KINAN_OS_DOSSIER`):
 |---|---|---|
 | `kinan.config.json` | yes | never |
 | `state.json` (agent states, written by the plugin) | yes | created with idle states if absent |
-| `sessions.json` (conversations, written by the plugin) | yes | never |
+| `sessions.json` (conversations, written by the plugin) | yes | only `libellesSessions` in `reglages.json` when you rename a conversation |
+| `sessions/<id>.json` (state of each conversation, plugin 0.3.0 and later; absent: `state.json` is used) | yes | never |
 | `historique.jsonl` (event log, written by the plugin) | yes | never |
 | `taches.json` (tasks) | yes | yes, from the Tasks tab (with the plugin's lock file `state.lock`) |
 | `reglages.json` (window position, sounds, prices, context size) | yes | yes |

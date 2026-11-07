@@ -29,6 +29,10 @@ contextBridge.exposeInMainWorld('kinanUI', {
   sessionsLire: () => ipcRenderer.invoke('sessions:lire'),
   economiesLire: () => ipcRenderer.invoke('economies:lire'),
   surSessions: (r) => ipcRenderer.on('sessions:maj', (_e, e) => r(e)),
+  // Conversation affichée : « recente », « toutes » ou identifiant (validé côté main contre le registre).
+  sessionChoisir: (id) => ipcRenderer.invoke('session:choisir', String(id)),
+  sessionCourante: () => ipcRenderer.invoke('session:courante'),
+  sessionRenommer: (id, libelle) => ipcRenderer.invoke('session:renommer', String(id), String(libelle == null ? '' : libelle).slice(0, 40)),
   majLire: () => ipcRenderer.invoke('maj:lire'),
   surMaj: (r) => ipcRenderer.on('maj:maj', (_e, e) => r(e)),
   majAppliquer: () => ipcRenderer.invoke('maj:appliquer'),

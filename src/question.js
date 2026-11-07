@@ -32,6 +32,7 @@ son.addEventListener('change', () => window.question.reglerSon(son.checked));
 
 window.question.surDonnees((d) => {
   document.getElementById('texte').textContent = d.texte || '';
+  document.querySelector('.qui').textContent = 'Kinan a une question' + (d.session ? ' · ' + d.session : '');
   document.getElementById('options').replaceChildren(...(d.options || []).map((o) => {
     const s = document.createElement('span'); s.className = 'pastille'; s.textContent = o; return s;
   }));

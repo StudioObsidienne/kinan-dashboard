@@ -12,7 +12,9 @@ const agentsConnus = () => {
 };
 const lireJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 
-function donnees(cle, lireEtat, dossier = DOSSIER) {
+// session : identifiant de la conversation choisie (historique et tâches de celle-ci seulement), ou null pour tout afficher.
+function donnees(cle, lireEtat, dossier = DOSSIER, session = null) {
+  const deLaSession = (x) => !session || x.session === session;
   const [nom, modele] = agentsConnus()[cle] || [cle, ''];
   const a = ((lireEtat() || {}).agents || {})[cle] || { etat: 'repos', tache: '' };
   // Historique : missions terminées = passage travail -> repos, avec le texte de la tâche en cours à ce moment.
@@ -25,7 +27,7 @@ function donnees(cle, lireEtat, dossier = DOSSIER) {
   for (const l of lignes) {
     let h;
     try { h = JSON.parse(l); } catch { continue; }
-    if (h.agent !== cle) continue;
+    if (h.agent !== cle || (session && h.s !== session)) continue;
     if (h.etat === 'travail') { actif = true; if (h.tache && (!tacheEnCours || !/^(Au travail|Mission reçue)/.test(h.tache))) tacheEnCours = h.tache; }
     else if (h.etat === 'repos') {
       if (actif) faits.push({ t: h.t, tache: (tacheEnCours && !/^(Au travail|Mission reçue)/.test(tacheEnCours)) ? tacheEnCours : 'Mission terminée', source: 'historique' });
@@ -33,7 +35,8 @@ function donnees(cle, lireEtat, dossier = DOSSIER) {
       actif = false; tacheEnCours = '';
     }
   }
-  const taches = (lireJson(path.join(dossier, 'taches.json'), {}).taches) || [];
+  const tachesBrutes = (lireJson(path.join(dossier, 'taches.json'), {}).taches);
+  const taches = (Array.isArray(tachesBrutes) ? tachesBrutes : []).filter((t) => t && typeof t === 'object' && deLaSession(t));
   for (const t of taches) {
     if (t.agent === cle && t.statut === 'fait') faits.push({ t: Date.parse(t.cree) || 0, tache: String(t.titre), source: 'tache' });
   }
@@ -57,10 +60,10 @@ function donnees(cle, lireEtat, dossier = DOSSIER) {
 }
 
 let fenetre = null, cleCourante = null;
-function enregistrer(lireEtat) {
-  ipcMain.handle('agent:donnees', () => (cleCourante ? donnees(cleCourante, lireEtat) : null));
+function enregistrer(lireEtat, sessionFiltre = () => null) {
+  ipcMain.handle('agent:donnees', () => (cleCourante ? donnees(cleCourante, lireEtat, DOSSIER, sessionFiltre()) : null));
   ipcMain.on('agent:ouvrir', (_e, cle) => ouvrirAgent(cle));
-  ipcMain.handle('agent:detail', (_e, cle) => (typeof cle === 'string' && Object.prototype.hasOwnProperty.call(agentsConnus(), cle) ? donnees(cle, lireEtat) : null));
+  ipcMain.handle('agent:detail', (_e, cle) => (typeof cle === 'string' && Object.prototype.hasOwnProperty.call(agentsConnus(), cle) ? donnees(cle, lireEtat, DOSSIER, sessionFiltre()) : null));
 }
 
 function ouvrirAgent(cle, cacher = false) {
