@@ -90,6 +90,8 @@
   .carte { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; align-items: center;
     padding: 7px 10px 7px 7px; background: var(--surface); border: 1px solid var(--ligne); border-radius: 10px;
     transition: border-color .4s, background-color .4s; }
+  .etat { transition: color .4s; }
+  @media (prefers-reduced-motion: reduce) { .carte, .etat { transition: none; } }
   .carte[data-etat="travail"] { border-color: #2f5a4a; }
   .carte[data-etat="doute"] { border-color: #5e5130; background: #1f1c22; }
   .carte[data-etat="erreur"] { border-color: #6a3036; background: #221a22; }

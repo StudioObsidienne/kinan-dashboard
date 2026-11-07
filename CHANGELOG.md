@@ -2,7 +2,10 @@
 
 Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il sera fixé à la publication.
 
-## [À venir]
+## [0.3.1] — 2026-11-07
+- **Bouton son** visible en permanence dans l'en-tête (haut-parleur, muet par défaut, mémorisé) : coupe ou active les sons du fouet, des ronflements de Drafion, des objets et de Jean.
+- **Erreur de Kinan** : affichée 20 s puis retour au repos, calculé à chaque lecture de l'état (plus de rouge qui reste), transition douce.
+- **Relance** : un second lancement ne restaure plus une fenêtre déjà ouverte.
 - Jean suit en direct le bouton son ; le raccourci Bureau / menu Démarrer est aussi recréé au démarrage de l'appli (Windows, silencieux), plus seulement via `lancer-kinan-os.cmd`.
 
 ## [0.3.0] — 2026-11-07 — Drafion's Awakening

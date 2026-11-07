@@ -16,17 +16,15 @@ const path = require('path');
 const DOSSIER_ETAT = config.DOSSIER;
 const FICHIER_ETAT = path.join(DOSSIER_ETAT, 'state.json');
 
+const { appliquerDelais } = require('./etat-delai');
+const erreursVues = new Map();
 const ETAT_PAR_DEFAUT = { agents: Object.fromEntries(config.ids().map((id) => [id, { etat: 'repos', tache: '' }])) };
 
 function lireEtat() {
   try {
     const etat = JSON.parse(fs.readFileSync(FICHIER_ETAT, 'utf8'));
-    // Un agent « au travail » sans nouvelle depuis 15 min est considéré au repos (hook manqué).
-    for (const a of Object.values(etat.agents || {})) {
-      if (a.etat !== 'repos' && a.maj && Date.now() - a.maj > 15 * 60 * 1000) { a.etat = 'repos'; a.tache = ''; }
-      // Une erreur d'outil est ponctuelle : le rouge disparaît après 20 s (le prochain message le remettra au travail).
-      if (a.etat === 'erreur' && a.maj && Date.now() - a.maj > 20 * 1000) { a.etat = 'repos'; a.tache = ''; }
-    }
+    // Délais (erreur 20 s puis repos, abandon 15 min) : voir etat-delai.js ; calculés à chaque lecture, donc sans attendre un évènement.
+    appliquerDelais(etat, Date.now(), erreursVues);
     return etat;
   } catch {
     return ETAT_PAR_DEFAUT;
