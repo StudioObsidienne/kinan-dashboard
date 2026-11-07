@@ -29,6 +29,21 @@ function comparer(a, b) {
   return pa === pb ? 0 : pa ? -1 : 1;
 }
 
+// Versions (appli, plugin) dont l'installée est strictement plus récente que la distante en cache : le cache est probablement périmé.
+function cachePerime(etat) {
+  if (!etat) return [];
+  return ['appli', 'plugin'].filter((k) => {
+    const e = etat[k];
+    return !!(e && versionValide(e.locale) && versionValide(e.distante) && comparer(e.locale, e.distante) > 0);
+  });
+}
+// Revérification forcée : seulement si le cache est périmé et pas plus d'une fois toutes les 2 min (anti-boucle).
+const GARDE_FORCEE = 2 * 60 * 1000;
+function doitRevérifier(etat, dernierForce, maintenant) {
+  if (!cachePerime(etat).length) return false;
+  return !Number.isFinite(dernierForce) || maintenant - dernierForce >= GARDE_FORCEE;
+}
+
 // Pop-up « Nouvelle mise à jour » dans l'appli : une fois par version et par lancement (appli et plugin séparément).
 // deja = versions déjà annoncées, mémorisées dans le cache (clé « annonce »). Fonctions pures (testées dans test/mise-a-jour.test.js).
 function aAnnoncer(etat, deja) {
@@ -139,6 +154,7 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
       etat[k].nouvelle = !!(d && etat[k].locale && comparer(d, etat[k].locale) > 0);
     }
     etat.aAnnoncer = active ? aAnnoncer(etat, cache.annonce) : [];
+    etat.cachePerime = active ? cachePerime(etat) : [];
   };
   const notifier = () => {
     try {
@@ -158,18 +174,25 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
   let enCours = false;
   async function verifier() {
     if (!active || enCours) return;
-    enCours = true;
+    enCours = true; etat.enCours = true; diffuser();
     try {
       const [a, p] = await Promise.all([versionDistante(SOURCES.appli), versionDistante(SOURCES.plugin)]);
       if (a || p) { // échec réseau complet : silence, le cache est conservé
         cache = { ...cache, verifie: Date.now(), appli: a || cache.appli || null, plugin: p || cache.plugin || null };
         appliquerCache(); notifier(); ecrireCache(); diffuser();
       }
-    } catch { /* silencieux */ } finally { enCours = false; }
+    } catch { /* silencieux */ } finally { enCours = false; etat.enCours = false; diffuser(); }
   }
+  // Cache périmé (installée > publiée en cache) : revérification immédiate, au plus une fois toutes les 2 min.
+  let dernierForce = null;
+  const reverifierSiPerime = () => {
+    if (!active || enCours || !doitRevérifier(etat, dernierForce, Date.now())) return false;
+    dernierForce = Date.now(); verifier(); return true;
+  };
   const majGit = async () => { try { etat.git = await etatGit(dossierAppli); } catch { etat.git = { possible: false, raison: 'git indisponible' }; } diffuser(); };
 
   ipcMain.handle('maj:lire', () => etat);
+  ipcMain.handle('maj:verifier', async () => { await verifier(); return etat; }); // bouton « Revérifier maintenant » (sans effet si désactivé)
   // Pop-up affiché : les versions annoncées sont mémorisées (plus jamais de pop-up pour elles).
   ipcMain.handle('maj:vu', () => { if (!active) return false; cache.annonce = marquerAnnonce(etat, cache.annonce); appliquerCache(); ecrireCache(); diffuser(); return true; });
   ipcMain.handle('maj:appliquer', async (e) => {
@@ -196,10 +219,12 @@ function demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEt
   if (active) {
     majGit();
     if (!etat.verifie || Date.now() - etat.verifie >= PERIODE) setTimeout(verifier, 5000);
-    // Contrôle toutes les 5 min : nouvelle requête seulement si la dernière vérification a 30 min (robuste à la mise en veille).
-    setInterval(() => { if (!etat.verifie || Date.now() - etat.verifie >= PERIODE) verifier(); }, 5 * 60000);
+    else setTimeout(reverifierSiPerime, 5000);
+    // Contrôle toutes les 5 min : nouvelle requête seulement si la dernière vérification a 30 min (robuste à la mise en veille),
+    // ou tout de suite si la version installée dépasse la publiée en cache (garde-fou : 2 min).
+    setInterval(() => { if (!etat.verifie || Date.now() - etat.verifie >= PERIODE) verifier(); else reverifierSiPerime(); }, 5 * 60000);
   }
   return { etat, verifier };
 }
 
-module.exports = { demarrer, aAnnoncer, marquerAnnonce, comparer, versionValide, versionPluginLocale, etatGit, mettreAJour };
+module.exports = { demarrer, cachePerime, doitRevérifier, GARDE_FORCEE, aAnnoncer, marquerAnnonce, comparer, versionValide, versionPluginLocale, etatGit, mettreAJour };

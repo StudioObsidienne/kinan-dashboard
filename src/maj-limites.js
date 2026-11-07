@@ -7,6 +7,7 @@
   const $ = (id) => document.getElementById(id);
   const ver = $('version'), verTxt = $('version-txt'), verPlugin = $('version-plugin'), pastille = $('pastille-maj');
   const carte = $('maj-carte'), corps = $('maj-corps'), msg = $('maj-msg'), go = $('maj-go'), fermer = $('maj-fermer');
+  const reverif = $('maj-reverif');
   let etat = null;
   const el = (tag, txt, cls) => { const n = document.createElement(tag); if (txt) n.textContent = txt; if (cls) n.className = cls; return n; };
   const code = (t) => el('code', t);
@@ -16,7 +17,7 @@
     if (!etat || !ver) return;
     const nouv = ['appli', 'plugin'].filter((k) => etat[k] && etat[k].nouvelle);
     const relancer = !!(etat.appli && etat.appli.aRelancer);
-    const aJour = etat.active && !!etat.verifie && !nouv.length;
+    const aJour = etat.active && !!etat.verifie && !nouv.length && !(Array.isArray(etat.cachePerime) && etat.cachePerime.length);
     verTxt.textContent = 'v' + etat.appli.locale;
     verPlugin.hidden = !(etat.plugin && etat.plugin.locale);
     if (!verPlugin.hidden) verPlugin.textContent = 'v' + etat.plugin.locale + ' Plugin';
@@ -64,6 +65,8 @@
     if (!etat.active) corps.append(el('p', 'La vérification des mises à jour est désactivée (aucune connexion). Voir le README pour l\'activer.'));
     else if (!etat.verifie) corps.append(el('p', 'Pas encore vérifié : pas de réseau ou GitHub injoignable. Nouvel essai plus tard.'));
     else if (a.aRelancer) corps.append(el('p', 'Appli mise à jour : relance-la pour terminer.'));
+    else if (!a.nouvelle && !(p && p.nouvelle) && Array.isArray(etat.cachePerime) && etat.cachePerime.length)
+      corps.append(el('p', etat.enCours ? 'Version plus récente que celle publiée (cache) : vérification en cours…' : 'Version plus récente que celle publiée (vérifiée le ' + dateCourte(etat.verifie) + ').'));
     else if (!a.nouvelle && !(p && p.nouvelle)) corps.append(el('p', 'Tout est à jour (vérifié le ' + dateCourte(etat.verifie) + ').'));
     if (a.nouvelle) {
       const ol = el('ol');
@@ -85,11 +88,17 @@
       corps.append(el('p', 'Si « Update » répond « latest version » alors que ce n\'est pas vrai, la première commande rafraîchit la liste. Plugin installé par git : git pull dans son dossier.'));
     }
     go.hidden = !(a.nouvelle && etat.git && etat.git.possible);
+    if (reverif) { reverif.hidden = !etat.active || !api.majVerifier; reverif.disabled = !!etat.enCours; reverif.textContent = etat.enCours ? 'Vérification en cours…' : 'Revérifier maintenant'; }
   }
 
   ver.addEventListener('click', () => { if (!etat) return; msg.textContent = ''; remplir(); carte.showModal(); });
   pastille.addEventListener('click', () => ver.click());
   fermer.addEventListener('click', () => carte.close());
+  if (reverif) reverif.addEventListener('click', async () => {
+    reverif.disabled = true; reverif.textContent = 'Vérification en cours…';
+    try { const r = await api.majVerifier(); if (r && r.appli) { etat = r; rendre(); } } catch { msg.textContent = 'Vérification impossible.'; }
+    if (etat) remplir();
+  });
   go.addEventListener('click', async () => {
     go.disabled = true; msg.textContent = 'Confirmation demandée…';
     try { const r = await api.majAppliquer(); msg.textContent = (r && r.message) || ''; } catch { msg.textContent = 'Échec de la mise à jour.'; }

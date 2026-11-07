@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('kinanUI', {
   surMaj: (r) => ipcRenderer.on('maj:maj', (_e, e) => r(e)),
   majAppliquer: () => ipcRenderer.invoke('maj:appliquer'),
   majVu: () => ipcRenderer.invoke('maj:vu'),
+  majVerifier: () => ipcRenderer.invoke('maj:verifier'),
   limitesLire: () => ipcRenderer.invoke('limites:lire'),
   surLimites: (r) => ipcRenderer.on('limites:maj', (_e, e) => r(e))
 });

@@ -2,6 +2,9 @@
 
 Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il sera fixé à la publication.
 
+## [0.4.1] — 2026-11-07
+- **Panneau des mises à jour** : si la version installée est plus récente que celle publiée en cache, l'appli revérifie tout de suite (au plus une fois toutes les 2 min) et ne dit plus « Tout est à jour » ; bouton « Revérifier maintenant ».
+
 ## [0.4.0] — 2026-11-07
 - **Allègement** : l'état n'est relu que si son fichier a changé (cache), et le minuteur d'une seconde se met en pause fenêtre masquée ou réduite.
 - **Plusieurs conversations** (plugin 0.3.0) : une pastille par conversation Claude Code ouverte, affichée à partir de 2. « Récente » (par défaut) suit la plus récente comme avant ; « Toutes » fusionne les agents (erreur > doute > travail > repos) ; une pastille montre les agents d'une seule conversation. Flèches gauche/droite, Entrée, double-clic pour renommer, « +n » au-delà de 5. Conversation fermée : retour à « Récente », annoncé aux lecteurs d'écran.

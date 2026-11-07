@@ -2,7 +2,26 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { aAnnoncer, marquerAnnonce } = require('../mise-a-jour');
+const { aAnnoncer, marquerAnnonce, cachePerime, doitRevérifier, GARDE_FORCEE } = require('../mise-a-jour');
+
+test('cache périmé : installée strictement supérieure à la distante', () => {
+  const e = (al, ad, pl, pd) => ({ appli: { locale: al, distante: ad }, plugin: { locale: pl, distante: pd } });
+  assert.deepStrictEqual(cachePerime(e('0.4.0', '0.3.1', null, null)), ['appli']);
+  assert.deepStrictEqual(cachePerime(e('0.4.0', '0.4.0', '1.2.0', '1.1.9')), ['plugin']);
+  assert.deepStrictEqual(cachePerime(e('0.4.0', '0.4.0', '1.0.0', '1.0.1')), []);
+  assert.deepStrictEqual(cachePerime(e('1.0.0', '1.0.0-beta', null, null)), ['appli']);
+  assert.deepStrictEqual(cachePerime(e('0.4.0', null, '1.0.0', null)), []);
+  assert.deepStrictEqual(cachePerime(null), []);
+});
+
+test('revérification forcée : garde-fou de 2 min', () => {
+  const perime = { appli: { locale: '0.4.0', distante: '0.3.1' }, plugin: { locale: null, distante: null } };
+  const sain = { appli: { locale: '0.3.1', distante: '0.3.1' }, plugin: { locale: null, distante: null } };
+  assert.strictEqual(doitRevérifier(perime, null, 1000), true);
+  assert.strictEqual(doitRevérifier(perime, 1000, 1000 + GARDE_FORCEE - 1), false);
+  assert.strictEqual(doitRevérifier(perime, 1000, 1000 + GARDE_FORCEE), true);
+  assert.strictEqual(doitRevérifier(sain, null, 1000), false);
+});
 
 const etat = (appli, plugin) => ({
   appli: { locale: '0.1.0', distante: appli, nouvelle: !!appli },

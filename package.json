@@ -1,6 +1,6 @@
 {
   "name": "kinan-dashboard",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Offline Electron dashboard for the kinan-orchestre Claude Code plugin: agents, conversations, relay reminder, local logs. No network by default; optional mail tab (IMAP/SMTP of your own mailbox) disabled until you enable it.",
   "main": "main.js",
   "private": true,

@@ -293,13 +293,14 @@ app.whenReady().then(() => {
   require('./limites').enregistrer({ ipcMain, BrowserWindow, dossierEtat: DOSSIER_ETAT });
   // Version et mises à jour : DÉSACTIVÉ par défaut (zéro réseau). Activé seulement par « miseAJour.verifier: true » dans kinan.config.json ;
   // le module réseau n'est alors chargé qu'à ce moment. Sinon : version locale seule, aucune requête, aucun git.
-  const lancerMaj = () => { if (config.charger(true).miseAJour.verifier !== true) return false; ['maj:lire', 'maj:appliquer', 'maj:vu'].forEach((c) => ipcMain.removeHandler(c)); if (config.charger().miseAJour.verifier === true) require('./mise-a-jour').demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEtat: DOSSIER_ETAT, dossierAppli: __dirname, active: true }); return true; };
+  const lancerMaj = () => { if (config.charger(true).miseAJour.verifier !== true) return false; ['maj:lire', 'maj:appliquer', 'maj:vu', 'maj:verifier'].forEach((c) => ipcMain.removeHandler(c)); if (config.charger().miseAJour.verifier === true) require('./mise-a-jour').demarrer({ ipcMain, BrowserWindow, dialog, app, Notification, dossierEtat: DOSSIER_ETAT, dossierAppli: __dirname, active: true }); return true; };
   if (!lancerMaj()) {
     let v = '0.0.0'; try { v = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || v; } catch { /* ignoré */ }
     const etatMaj = { active: false, verifie: null, appli: { locale: v, distante: null, nouvelle: false }, plugin: { locale: null, distante: null, nouvelle: false }, git: { possible: false, raison: 'vérification désactivée' }, aAnnoncer: [] };
     ipcMain.handle('maj:lire', () => etatMaj);
     ipcMain.handle('maj:appliquer', () => ({ ok: false, message: 'Vérification des mises à jour désactivée (voir README).' }));
     ipcMain.handle('maj:vu', () => false);
+    ipcMain.handle('maj:verifier', () => etatMaj);
   }
   // Premier lancement, réglage absent de kinan.config.json : une seule question. Aucune requête avant un « Oui ».
   // La réponse (Oui ou Non) est écrite dans kinan.config.json (miseAJour.verifier) et la question n'est plus posée.
