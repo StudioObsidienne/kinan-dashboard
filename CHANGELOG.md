@@ -3,6 +3,7 @@
 Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il sera fixé à la publication.
 
 ## [0.4.0] — 2026-11-07
+- **Allègement** : l'état n'est relu que si son fichier a changé (cache), et le minuteur d'une seconde se met en pause fenêtre masquée ou réduite.
 - **Plusieurs conversations** (plugin 0.3.0) : une pastille par conversation Claude Code ouverte, affichée à partir de 2. « Récente » (par défaut) suit la plus récente comme avant ; « Toutes » fusionne les agents (erreur > doute > travail > repos) ; une pastille montre les agents d'une seule conversation. Flèches gauche/droite, Entrée, double-clic pour renommer, « +n » au-delà de 5. Conversation fermée : retour à « Récente », annoncé aux lecteurs d'écran.
 - Détail d'agent : historique et tâches de la conversation choisie. Le son et la fenêtre question suivent toutes les conversations ; la question indique le nom de sa conversation.
 - Le rendu ne reçoit plus aucun chemin (dossier, journal de conversation) : seulement nom, état et nombre d'agents au travail par conversation.
