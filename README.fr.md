@@ -13,7 +13,7 @@ Le plugin écrit les fichiers d'état ; ce tableau de bord se contente de les af
 - Testé sous Windows uniquement. macOS et Linux n'ont pas été testés.
 - Deux numéros de version distincts : le tableau de bord (cette appli, affiché « Dashboard » à côté du titre) et le plugin kinan-orchestre (affiché « Plugin » en dessous). Ils se mettent à jour séparément et n'ont pas à correspondre. Le tableau de bord se met à jour avec `git pull` ; le plugin se met à jour dans Claude Code (`claude plugin marketplace update kinan`, puis `claude plugin update kinan-orchestre@kinan`, puis redémarrer Claude Code).
 - Interface en français.
-- Version 0.2.6. Electron 45. Déjà utilisé par des testeurs sur leur propre ordinateur (premiers retours intégrés : fluidité des animations, icône de la barre des tâches, mise à jour). Une prochaine version est en cours.
+- Version 0.3.1. Electron 45. Déjà utilisé par des testeurs sur leur propre ordinateur (premiers retours intégrés : fluidité des animations, icône de la barre des tâches, mise à jour). Une prochaine version est en cours.
 - Le tableau de bord affiche ce que le plugin écrit. Pour que le juge fonctionne comme prévu, utilisez **Sonnet 5.5** avec un effort **moyen** dans le chat Claude principal.
 
 ## Installation
