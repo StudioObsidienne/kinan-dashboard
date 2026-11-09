@@ -105,27 +105,12 @@
       api.salir();
     }
 
-    // ---- son : sifflement de la lanière puis claquement bref (bruit filtré), calé sur l'impact ; muet par défaut ----
-    let ac = null, bruit = null;
+    // ---- son : assets/sons/fouet.mp3 (SonFichier), pas fort, calé sur l'impact et coupé à COUPE_FOUET ; muet par défaut ----
     function claquer() {
-      if (api.muet() || doc.hidden) return;
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      try {
-        if (!ac) ac = new AC();
-        if (ac.state === 'suspended' && ac.resume) ac.resume().catch(() => {});
-        if (!bruit) { const n = Math.floor(ac.sampleRate * 0.5); bruit = ac.createBuffer(1, n, ac.sampleRate); const d = bruit.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; }
-        const t0 = ac.currentTime + 0.005, tc = t0 + (api.calme() ? 0 : L.IMPACT / 1000);
-        const voie = (t, att, fin, vol, filtres) => {
-          const s = ac.createBufferSource(), e = ac.createGain(); s.buffer = bruit;
-          let n = s; for (const [type, f, q, f2] of filtres) { const b = ac.createBiquadFilter(); b.type = type; b.Q.value = q; b.frequency.setValueAtTime(f, t); if (f2) b.frequency.exponentialRampToValueAtTime(f2, fin); n.connect(b); n = b; }
-          e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(vol, t + att); e.gain.exponentialRampToValueAtTime(0.0001, fin);
-          n.connect(e); e.connect(ac.destination); s.start(t); s.stop(fin + 0.02);
-        };
-        if (tc > t0 + 0.03) voie(t0, tc - t0 - 0.01, tc + 0.015, 0.018, [['bandpass', 500, 1.1, 2600]]); // sifflement
-        voie(tc, 0.0015, tc + 0.05, 0.12, [['highpass', 1700, 0.7]]);                                   // claquement
-        voie(tc + 0.004, 0.003, tc + 0.11, 0.035, [['bandpass', 3400, 2.5]]);                         // petite queue
-      } catch { /* son facultatif */ }
+      const SF = window.SonsFichiers;
+      if (!SF || !window.SonFichier) return;
+      window.SonFichier.jouer({ src: SF.FICHIER_FOUET, debut: 0, duree: SF.dureeFouet(), fondu: SF.FONDU_FOUET, volume: SF.VOLUME_FOUET,
+        retard: SF.retardFouet(api.calme() ? 0 : L.IMPACT), actif: () => !api.muet() && !doc.hidden });
     }
 
     // ---- dessin ----

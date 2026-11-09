@@ -79,6 +79,7 @@ for (const f of liste) {
       const c = csp[1];
       if (!/default-src 'none'/.test(c)) erreurs.push(`${rel} : CSP sans default-src 'none'`);
       if (!/connect-src 'none'/.test(c)) erreurs.push(`${rel} : CSP sans connect-src 'none'`);
+      if (/media-src/.test(c) && !/media-src 'self'(?:;|$)/.test(c)) erreurs.push(`${rel} : media-src autre que 'self'`);
       if (/https?:|\*|wss?:/.test(c)) erreurs.push(`${rel} : CSP qui autorise une origine distante`);
     }
   }

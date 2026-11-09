@@ -58,70 +58,27 @@
       if (persiste) api.stock.set('dernier', suivi.dernier);
     });
 
-    // ---- sons (Web Audio local au module ; muet par défaut via api.muet(), rien si la fenêtre est masquée) ----
-    let ac = null, tampon = null, serie = null;
-    function audio() {
-      if (api.muet() || document.hidden) return null;
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return null;
-      try {
-        if (!ac) ac = new AC();
-        if (ac.state === 'suspended' && ac.resume) ac.resume().catch(() => {});
-        if (!tampon) { // bruit brun (souffle) de 2 s
-          const n = ac.sampleRate * 2; tampon = ac.createBuffer(1, n, ac.sampleRate);
-          const d = tampon.getChannelData(0); let b = 0;
-          for (let i = 0; i < n; i++) { b = 0.97 * b + 0.03 * (Math.random() * 2 - 1); d[i] = b * 5; }
-        }
-        if (!serie) { serie = ac.createGain(); serie.gain.value = 1; serie.connect(ac.destination); }
-        return ac;
-      } catch { return null; }
+    // ---- sons : extraits courts de assets/sons/ronflement.mp3 (SonFichier), pas fort ; muet par défaut via api.muet(), rien si la fenêtre est masquée ----
+    const SF = window.SonsFichiers;
+    let lecture = null, dernierDecalage = null;
+    const actif = () => !api.muet() && !document.hidden;
+    function jouerExtrait(duree, fondu, retard) {
+      if (!SF || !window.SonFichier || !actif()) return;
+      const debut = SF.choisirDecalage(SF.DECALAGES_RONFLEMENT, SF.DUREE_RONFLEMENT, duree, Math.random, dernierDecalage);
+      dernierDecalage = debut;
+      if (lecture) lecture.couper();
+      lecture = window.SonFichier.jouer({ src: SF.FICHIER_RONFLEMENT, debut, duree, fondu, volume: SF.VOLUME_RONFLEMENT, retard, actif });
     }
-    function couperSons() {
-      if (!ac || !serie) return;
-      try { serie.gain.setTargetAtTime(0.0001, ac.currentTime, 0.02); } catch { /* ignoré */ }
-      serie = null;
-    }
-    function enveloppe(t0, att, d, vol) {
-      const e = ac.createGain();
-      e.gain.setValueAtTime(0.0001, t0); e.gain.exponentialRampToValueAtTime(vol, t0 + att); e.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-      e.connect(serie); return e;
-    }
-    // Inspiration ronflée : souffle filtré + voile du palais qui vibre (modulation ~26 Hz) + fondamentale grave.
-    function inspiration(t0, d, vol) {
-      const env = enveloppe(t0, d * 0.6, d, vol), vib = ac.createGain(); vib.gain.value = 0.55; vib.connect(env);
-      const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.type = 'triangle';
-      lfo.frequency.setValueAtTime(23, t0); lfo.frequency.linearRampToValueAtTime(29, t0 + d); lg.gain.value = 0.45; lfo.connect(lg); lg.connect(vib.gain);
-      const src = ac.createBufferSource(), bp = ac.createBiquadFilter(); src.buffer = tampon; src.loop = true;
-      bp.type = 'bandpass'; bp.Q.value = 1.3; bp.frequency.setValueAtTime(240, t0); bp.frequency.linearRampToValueAtTime(360, t0 + d); src.connect(bp); bp.connect(vib);
-      const o = ac.createOscillator(), lp = ac.createBiquadFilter(), og = ac.createGain(); o.type = 'sawtooth';
-      o.frequency.setValueAtTime(58, t0); o.frequency.linearRampToValueAtTime(70, t0 + d * 0.7); lp.type = 'lowpass'; lp.frequency.value = 300; og.gain.value = 0.35;
-      o.connect(lp); lp.connect(og); og.connect(vib);
-      for (const n of [lfo, src, o]) { n.start(t0); n.stop(t0 + d + 0.05); }
-    }
-    // Expiration : petit « pfff » doux entre les lèvres.
-    function expiration(t0, d, vol) {
-      const env = enveloppe(t0, 0.18, d, vol), src = ac.createBufferSource(), bp = ac.createBiquadFilter();
-      src.buffer = tampon; src.loop = true; bp.type = 'bandpass'; bp.Q.value = 0.8;
-      bp.frequency.setValueAtTime(950, t0); bp.frequency.exponentialRampToValueAtTime(520, t0 + d);
-      src.connect(bp); bp.connect(env); src.start(t0); src.stop(t0 + d + 0.05);
-    }
-    // Série de trois respirations ronflées, calée sur le sinus de respiration (même horloge que le dessin).
+    function couperSons() { if (lecture) { lecture.couper(); lecture = null; } }
+    // Série de ronflements : un extrait de ~6 s qui démarre sur la prochaine inspiration (même horloge que le dessin ; la bouche reste ouverte 12 s).
     function ronfler() {
       const now = performance.now(), t0 = L.prochaineInspiration(now);
       ronfleDebut = t0; ronfleFin = t0 + 3 * 4000;
-      if (!audio()) return;
-      try {
-        for (let k = 0; k < 3; k++) {
-          const ti = t0 + k * 4000, base = ac.currentTime + (ti - now) / 1000;
-          inspiration(base, 1.75, 0.045 - k * 0.006);
-          expiration(base + 2, 1.5, 0.02);
-        }
-      } catch { /* son facultatif */ }
+      jouerExtrait(SF ? SF.EXTRAIT_RONFLEMENT : 0, SF ? SF.FONDU_RONFLEMENT : 0, (t0 - now) / 1000);
     }
-    // Ronflement coupé net au réveil (« hrnk ! »).
+    // Ronflement coupé net au réveil (« hrnk ! ») : bref extrait.
     function renifler(retard) {
-      if (!audio()) return;
-      try { inspiration(ac.currentTime + 0.01 + (retard || 0), 0.2, 0.05); } catch { /* son facultatif */ }
+      if (SF) jouerExtrait(SF.EXTRAIT_RENIFLE, SF.FONDU_RENIFLE, retard || 0);
     }
     api.minuteur(() => {
       if (suivi.etat !== 'repos' || brutal) return;

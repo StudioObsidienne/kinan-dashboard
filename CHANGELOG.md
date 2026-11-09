@@ -2,6 +2,9 @@
 
 Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il sera fixé à la publication.
 
+## [À venir]
+- **Vrais sons** : les ronflements de Drafion (extrait de ~6 s, fondus) et le claquement du fouet jouent maintenant deux fichiers mp3 locaux (`assets/sons/`, CC0, voir `LICENCE.md`), à volume discret ; CSP : `media-src 'self'` ajouté à `index.html`. Fichier illisible : silence.
+
 ## [0.4.1] — 2026-11-07
 - **Panneau des mises à jour** : si la version installée est plus récente que celle publiée en cache, l'appli revérifie tout de suite (au plus une fois toutes les 2 min) et ne dit plus « Tout est à jour » ; bouton « Revérifier maintenant ».
 
