@@ -16,7 +16,7 @@ const path = require('path');
 const RACINE = path.resolve(__dirname, '..');
 const SORTIE = path.join(RACINE, 'assets', 'demo');
 const L = 1280, H = 720, IPS = 30, DEBIT = 1800000, DEBIT_AUDIO = 96000;
-const DUREE_CARTON_S = 4, DUREE_MUSIQUE_S = 80, GAIN_GLOBAL = 0.8;
+const DUREE_CARTON_S = 4, DUREE_MUSIQUE_S = 80, GAIN_GLOBAL = 0.62;
 const VITESSE_SOMMEIL = 200; // ?egg-vitesse : l'horloge des easter eggs va 200 fois plus vite (10 min d'inactivité = 3 s)
 
 // ---------- dossiers temporaires et environnement (avant tout require de l'appli) ----------
@@ -123,7 +123,7 @@ function lancerMusique(t0, total) {
       for (const det of [-5, 5]) {
         const o = ctx.createOscillator(), g = ctx.createGain();
         o.type = k % 2 ? 'sine' : 'triangle'; o.frequency.value = f; o.detune.value = det;
-        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.026, t + 1.4); g.gain.setValueAtTime(0.026, t + dur - 0.4); g.gain.linearRampToValueAtTime(0.0001, t + dur + 1.2);
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.02, t + 1.4); g.gain.setValueAtTime(0.02, t + dur - 0.4); g.gain.linearRampToValueAtTime(0.0001, t + dur + 1.2);
         o.connect(g); g.connect(filtre); o.start(t); o.stop(t + dur + 1.3);
       }
     });
@@ -132,7 +132,7 @@ function lancerMusique(t0, total) {
     const t = t0 + b * tps, i = Math.floor(b / 8) % 4, premier = b % 4 === 0;
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(BASSES[i] * 1.25, t); o.frequency.exponentialRampToValueAtTime(BASSES[i], t + 0.08);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(premier ? 0.11 : 0.07, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(premier ? 0.075 : 0.045, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
     o.connect(g); g.connect(musique); o.start(t); o.stop(t + 0.35);
     // très léger souffle sur les contretemps
     const s = ctx.createBufferSource(); s.buffer = bufBruit; s.loop = true;
