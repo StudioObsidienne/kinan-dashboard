@@ -47,7 +47,8 @@ function proposerAgent(titre) {
 // ----- Onglets -----
 document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => {
   document.querySelectorAll('nav button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-  for (const s of ['taches', 'histo', 'jetons', 'courrier']) $(s).hidden = s !== b.dataset.onglet;
+  for (const s of ['taches', 'histo', 'jetons', 'courrier', 'notes']) $(s).hidden = s !== b.dataset.onglet;
+  if (b.dataset.onglet === 'notes' && window.chargerNotes) window.chargerNotes(); // notes.js, chargé après ce fichier
   if (b.dataset.onglet === 'histo') chargerHisto();
   if (b.dataset.onglet === 'taches') rafraichirTaches();
   if (b.dataset.onglet === 'jetons') chargerJetons();

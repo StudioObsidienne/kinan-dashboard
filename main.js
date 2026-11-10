@@ -147,7 +147,9 @@ function creerFenetre() {
     try { fenetre.setAppDetails({ appId: 'kinan-os.dashboard', appIconPath: path.join(__dirname, 'assets', 'icon.ico'), appIconIndex: 0, relaunchCommand: `"${process.execPath}" "${__dirname}"`, relaunchDisplayName: 'Kinan Orchestre' }); } catch { /* sans effet */ }
   }
   fenetre.on('closed', () => { if (fenetrePrincipale === fenetre) fenetrePrincipale = null; });
-  if (TEST_DEMARRAGE) surveillerDemarrage(fenetre);
+  // KINAN_TEST_ONGLET=notes (test seulement) : la fenêtre Gestion s'ouvre sur l'onglet Notes et c'est elle qui est surveillée.
+  if (TEST_DEMARRAGE && process.env.KINAN_TEST_ONGLET === 'notes') surveillerDemarrage(gestion.ouvrirGestion('notes'), true);
+  else if (TEST_DEMARRAGE) surveillerDemarrage(fenetre);
   fenetre.loadFile(path.join(__dirname, 'src', 'index.html'));
 
   // Envoi de l'état une fois par seconde, seulement s'il a changé.
@@ -188,8 +190,13 @@ if (TEST_DEMARRAGE) {
   process.on('uncaughtException', (e) => erreursDemarrage.push('processus principal : ' + String((e && e.stack) || e).slice(0, 400)));
   setTimeout(() => { process.stdout.write(['DEMARRAGE ERREUR', 'délai dépassé (45 s)', ...erreursDemarrage, ''].join('\n')); app.exit(2); }, 45000).unref();
 }
-function surveillerDemarrage(fenetre) {
+function surveillerDemarrage(fenetre, scenarioNotes) {
   const wc = fenetre.webContents;
+  // Scénario Notes : Ctrl+N crée une note, le texte est saisi dans l'éditeur ; l'enregistrement automatique doit écrire notes.json.
+  if (scenarioNotes) wc.once('did-finish-load', () => setTimeout(() => wc.executeJavaScript(
+    "document.dispatchEvent(new KeyboardEvent('keydown',{key:'n',ctrlKey:true,bubbles:true}));" +
+    "setTimeout(()=>{const t=document.activeElement;if(!t||t.id!=='n-texte')console.error('focus absent de l\\'éditeur');else{t.value='Idée test démarrage\\nligne 2';t.dispatchEvent(new Event('input',{bubbles:true}));}},800)"
+  ).catch((e) => erreursDemarrage.push('scénario notes : ' + e.message)), 300));
   wc.on('console-message', (ev) => { if (ev && ev.level === 'error') erreursDemarrage.push('page : ' + String(ev.message).slice(0, 400)); });
   wc.on('preload-error', (_e, f, err) => erreursDemarrage.push('preload ' + path.basename(String(f)) + ' : ' + String(err && err.message).slice(0, 300)));
   wc.on('did-fail-load', (_e, code, desc) => erreursDemarrage.push(`chargement : ${code} ${desc}`));
@@ -253,6 +260,7 @@ app.whenReady().then(() => {
   gestion.enregistrer();
   // Courrier : option désactivée par défaut. courrier-ipc.js ne charge courrier.js (IMAP/SMTP, Claude Code) qu'après activation explicite.
   require('./courrier-ipc').enregistrer();
+  require('./notes-ipc').enregistrer(); // bloc-notes local (notes.json), aucun réseau
   require('./economies').enregistrer(ipcMain); // coche verte : rapport des 3 dernières heures (0 jeton)
   require('./ui-ipc').enregistrer({ gestion, son });
   // Clone déployé (un exemplaire de plus, à partir de 2) : notification système ; le petit son est joué par son-ipc.js.

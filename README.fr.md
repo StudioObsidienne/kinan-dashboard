@@ -48,6 +48,7 @@ Contrôler les règles réseau de façon statique : `npm run verifier` (voir « 
 | Journal des événements, fenêtre Gestion (onglets Tâches, Historique, Jetons, Courrier) | Tâches enregistrées localement ; l'onglet Jetons est une estimation tirée des journaux locaux. |
 | Sons (synthèse Web Audio ; les ronflements de Drafion et le claquement du fouet jouent de courts extraits de deux fichiers mp3 locaux de `assets/sons/`, CC0, voir `assets/sons/LICENCE.md`) | Discrets par défaut. Désactivables par le bouton Sons ou `sons.actif: false`. Un fichier illisible donne du silence. |
 | Thème (couleurs, polices) | Les polices doivent être installées sur l'ordinateur : rien n'est téléchargé. `theme.logo` (une URL) n'est jamais téléchargé (édition hors ligne) : pour afficher votre logo dans le tableau au mur, copiez-le dans `~/.kinan-os/logo.png` (ou `logo.jpg`, `logo.webp` ; 2 Mo au plus). Il est redessiné en pixel art 32 × 24 (12 couleurs au plus, contour d'un pixel si le fond du logo est transparent). Fichier absent ou illisible : un paysage neutre est affiché. `source` n'est pas utilisé. |
+| Onglet Notes (Gestion) : bloc-notes rangé par projet et par dossier, Boîte de réception, Ctrl+N, enregistrement automatique, recherche, corbeille 30 jours, export `.md` | 100 % local, rien n'est envoyé : `notes.json` dans le dossier d'état (écriture atomique, sauvegarde `notes.json.bak`). 5000 notes et 100 000 caractères par note au plus. |
 | Onglet Courrier (Gestion, optionnel, désactivé par défaut) : relève de votre boîte en lecture seule, récap et brouillons de réponse par l'agent `courrier` du plugin, devis par son agent `devis` à partir de votre grille de prix, validation, puis envoi après une confirmation du système | Nécessite le plugin kinan-orchestre (agents) et la commande `claude`. Authentification par mot de passe uniquement : OAuth n'est pas géré, certains comptes Microsoft sont donc refusés. Boîte de réception seulement ; première relève : 30 derniers jours, 50 mails au plus. Voir « Courrier ». |
 
 ## Configuration
@@ -129,6 +130,7 @@ Dossier d'état (`~/.kinan-os/` ou `KINAN_OS_DOSSIER`) :
 | `state.json` (états des agents, écrit par le plugin) | oui | créé avec des états au repos s'il manque |
 | `sessions.json` (conversations, écrit par le plugin) | oui | jamais (un renommage de conversation va dans `reglages.json`, clé `libellesSessions`) |
 | `sessions/<id>.json` (état de chaque conversation, plugin 0.3.0 et suivants ; absent : `state.json` est lu) | oui | jamais |
+| `notes.json` (+ `notes.json.bak`, vos notes de l'onglet Notes) | oui | oui : uniquement ce que vous écrivez dans l'onglet Notes ; jamais envoyé nulle part |
 | `historique.jsonl` (journal, écrit par le plugin) | oui | jamais |
 | `taches.json` (tâches) | oui | oui, depuis l'onglet Tâches (avec le verrou `state.lock` du plugin) |
 | `reglages.json` (position de la fenêtre, sons, tarifs, taille du contexte) | oui | oui |

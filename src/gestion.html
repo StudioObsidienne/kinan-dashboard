@@ -14,6 +14,7 @@
     <button role="tab" data-onglet="histo" aria-selected="false">Historique</button>
     <button role="tab" data-onglet="jetons" aria-selected="false">Jetons</button>
     <button role="tab" data-onglet="courrier" aria-selected="false">Courrier</button>
+    <button role="tab" data-onglet="notes" aria-selected="false">Notes</button>
   </nav>
 </header>
 <main>
@@ -121,8 +122,36 @@
       <div id="liste-envoi"></div>
     </div>
   </section>
+  <section id="notes" hidden aria-label="Bloc-notes">
+    <p id="n-avis" class="avertissement" role="alert" hidden></p>
+    <div class="n-grille">
+      <div class="n-arbre" role="navigation" aria-label="Rangement des notes">
+        <ul id="n-arbre" class="n-liste-arbre"></ul>
+        <form id="n-form-projet" class="n-ajout"><input id="n-nom-projet" type="text" maxlength="80" placeholder="Nouveau projet" aria-label="Nom du nouveau projet" autocomplete="off"><button type="submit">Ajouter</button></form>
+      </div>
+      <div class="n-colonne">
+        <div class="barre"><button id="n-nouvelle" class="primaire" title="Ctrl+N dans cet onglet" aria-keyshortcuts="Control+N">Nouvelle note</button><input id="n-recherche" type="search" placeholder="Rechercher dans toutes les notes…" autocomplete="off" aria-label="Rechercher dans toutes les notes"></div>
+        <div id="n-actions-lieu" class="barre"></div>
+        <h2 id="n-titre-lieu" class="sous-titre"></h2>
+        <ul id="n-liste" class="n-liste" aria-labelledby="n-titre-lieu"></ul>
+        <p id="n-vide" class="muet" hidden></p>
+      </div>
+      <div class="n-editeur" id="n-editeur" hidden>
+        <label for="n-texte" class="muet">Note (la première ligne sert de titre)</label>
+        <textarea id="n-texte" maxlength="100000" spellcheck="true"></textarea>
+        <div class="barre">
+          <button id="n-epingler" aria-pressed="false">Épingler</button>
+          <label class="n-deplacer muet">Déplacer vers…<select id="n-deplacer"></select></label>
+          <button id="n-supprimer" class="danger">Supprimer</button>
+        </div>
+        <p id="n-etat" class="muet petit" role="status"></p>
+      </div>
+    </div>
+    <div id="n-toast" class="n-toast" role="status" aria-live="polite" hidden><span id="n-toast-txt"></span> <button id="n-annuler">Annuler</button></div>
+  </section>
 </main>
 <script src="theme.js"></script>
 <script src="gestion.js"></script>
+<script src="notes.js"></script>
 </body>
 </html>

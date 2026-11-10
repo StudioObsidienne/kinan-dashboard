@@ -2,6 +2,9 @@
 
 Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il sera fixé à la publication.
 
+## [0.5.0] — 2026-11-10
+- **Bloc-notes** (onglet Notes de Gestion) : idées et pense-bêtes rangés par projet et par dossier, Boîte de réception par défaut, Ctrl+N, enregistrement automatique, épinglage, déplacement, recherche plein texte, corbeille 30 jours avec « Annuler », export `.md`. 100 % local : `notes.json` (écriture atomique, sauvegarde `notes.json.bak`, fichier abîmé conservé à part). Spec : `docs/SPEC-NOTES.md`.
+
 ## [0.4.2] — 2026-11-10
 - **Vrais sons** : les ronflements de Drafion (extrait de ~6 s, fondus) et le claquement du fouet jouent maintenant deux fichiers mp3 locaux (`assets/sons/`, CC0, voir `LICENCE.md`), à volume discret ; CSP : `media-src 'self'` ajouté à `index.html`. Fichier illisible : silence.
 

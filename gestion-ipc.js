@@ -276,12 +276,12 @@ function enregistrerJetons() {
 
 let fenetre = null;
 function ouvrirGestion(onglet) {
-  const ok = ['taches', 'histo', 'jetons', 'courrier'].includes(onglet) ? onglet : null; // onglet validé côté main
+  const ok = ['taches', 'histo', 'jetons', 'courrier', 'notes'].includes(onglet) ? onglet : null; // onglet validé côté main
   if (fenetre && !fenetre.isDestroyed()) {
     if (fenetre.isMinimized()) fenetre.restore();
     fenetre.focus();
     if (ok) fenetre.webContents.send('gestion:onglet', ok);
-    return;
+    return fenetre;
   }
   fenetre = new BrowserWindow({
     width: 1000, height: 720, minWidth: 700, minHeight: 500,
@@ -292,6 +292,7 @@ function ouvrirGestion(onglet) {
   });
   fenetre.loadFile(path.join(__dirname, 'src', 'gestion.html'), ok ? { query: { onglet: ok } } : undefined);
   fenetre.on('closed', () => { fenetre = null; });
+  return fenetre;
 }
 
 module.exports = { enregistrer, ouvrirGestion, ecrireTaches, agentDuJournal, calculerJetons, coutEuros, lireTarifs };

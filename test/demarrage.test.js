@@ -12,9 +12,9 @@ const path = require('path');
 let electron = null;
 try { electron = require('electron'); } catch { /* npm install non fait */ }
 
-function demarrer(dossier) {
+function demarrer(dossier, extra) {
   return new Promise((ok) => {
-    const env = { ...process.env, KINAN_TEST_DEMARRAGE: '1', KINAN_OS_DOSSIER: dossier };
+    const env = { ...process.env, KINAN_TEST_DEMARRAGE: '1', KINAN_OS_DOSSIER: dossier, ...(extra || {}) };
     delete env.ELECTRON_RUN_AS_NODE;
     const p = spawn(electron, ['.'], { cwd: path.join(__dirname, '..'), env });
     let sortie = '';
@@ -42,8 +42,20 @@ test('le tableau de bord démarre et charge sa page sans erreur', { skip: !elect
 });
 
 test('fichiers d\'état corrompus : le tableau de bord démarre quand même', { skip: !electron && 'Electron absent (npm install)', timeout: 90000 }, async (t) => {
-  const d = dossierTest(t, { 'state.json': 'null', 'sessions.json': 'null', 'taches.json': '{tronqué', 'historique.jsonl': 'pas du json\n' });
+  const d = dossierTest(t, { 'state.json': 'null', 'sessions.json': 'null', 'taches.json': '{tronqué', 'historique.jsonl': 'pas du json\n', 'notes.json': '{tronqué' });
   const r = await demarrer(d);
   assert.match(r.sortie, /DEMARRAGE OK/, r.sortie.slice(-2000));
   assert.strictEqual(r.code, 0, r.sortie.slice(-2000));
+});
+
+test('onglet Notes : Ctrl+N ouvre une note, la saisie est enregistrée dans notes.json (sauvegarde .bak)', { skip: !electron && 'Electron absent (npm install)', timeout: 90000 }, async (t) => {
+  const d = dossierTest(t);
+  const r = await demarrer(d, { KINAN_TEST_ONGLET: 'notes' });
+  assert.match(r.sortie, /DEMARRAGE OK/, r.sortie.slice(-2000));
+  assert.strictEqual(r.code, 0, r.sortie.slice(-2000));
+  const notes = JSON.parse(fs.readFileSync(path.join(d, 'notes.json'), 'utf8')).notes;
+  assert.strictEqual(notes.length, 1);
+  assert.strictEqual(notes[0].titre, 'Idée test démarrage');
+  assert.strictEqual(notes[0].projet, null, 'Boîte de réception');
+  assert.ok(fs.existsSync(path.join(d, 'notes.json.bak')), 'sauvegarde écrite');
 });

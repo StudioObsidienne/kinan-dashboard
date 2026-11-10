@@ -50,6 +50,7 @@ Check the network rules statically: `npm run verifier` (see "Network" below). Ru
 | Event log, Gestion window (Tasks, History, Tokens, Mail tabs) | Tasks are stored locally; the Tokens tab is an estimate from local logs. |
 | Sounds (Web Audio synthesis; Drafion's snoring and the whip crack play short extracts of two local mp3 files in `assets/sons/`, CC0, see `assets/sons/LICENCE.md`) | Quiet by default. Can be turned off with the Sounds button or `sons.actif: false`. A file that cannot be loaded means silence. |
 | Theme (colors, fonts) | Fonts must be installed on the computer: nothing is downloaded. `theme.logo` (a URL) is never downloaded (offline edition): to show your logo in the frame on the wall, copy it to `~/.kinan-os/logo.png` (or `logo.jpg`, `logo.webp`; 2 MB at most). It is redrawn as 32 × 24 pixel art (12 colours at most, 1-pixel outline when the logo has a transparent background). No file, or a file that cannot be read: a neutral landscape is shown. `source` is not used. |
+| Notes tab (Gestion): notepad organised by project and folder, Inbox, Ctrl+N, autosave, search, 30-day trash, `.md` export | 100% local, nothing is sent: `notes.json` in the state folder (atomic write, `notes.json.bak` backup). At most 5000 notes and 100,000 characters per note. |
 | Mail tab (Gestion, optional, disabled by default): fetch your mails read-only, summary and reply drafts by the plugin's `courrier` agent, quotes by its `devis` agent from your price grid, validation, then sending after a system confirmation | Needs the kinan-orchestre plugin (agents) and the `claude` command. Password authentication only: OAuth is not supported, so some Microsoft accounts are refused. Inbox only; first fetch: last 30 days, 50 mails at most. See "Mail". |
 
 ## Configuration
@@ -146,6 +147,7 @@ State folder (`~/.kinan-os/` or `KINAN_OS_DOSSIER`):
 | `state.json` (agent states, written by the plugin) | yes | created with idle states if absent |
 | `sessions.json` (conversations, written by the plugin) | yes | only `libellesSessions` in `reglages.json` when you rename a conversation |
 | `sessions/<id>.json` (state of each conversation, plugin 0.3.0 and later; absent: `state.json` is used) | yes | never |
+| `notes.json` (+ `notes.json.bak`, your notes from the Notes tab) | yes | yes: only what you write in the Notes tab; never sent anywhere |
 | `historique.jsonl` (event log, written by the plugin) | yes | never |
 | `taches.json` (tasks) | yes | yes, from the Tasks tab (with the plugin's lock file `state.lock`) |
 | `reglages.json` (window position, sounds, prices, context size) | yes | yes |

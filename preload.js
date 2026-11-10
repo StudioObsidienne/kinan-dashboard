@@ -55,6 +55,15 @@ contextBridge.exposeInMainWorld('gestion', {
   reglerContexte: (n) => ipcRenderer.invoke('gestion:reglage-contexte', n)
 });
 
+// Bloc-notes (onglet Notes) : 100 % local. La page envoie des opérations, le processus principal les valide et écrit notes.json.
+contextBridge.exposeInMainWorld('notes', {
+  lire: () => ipcRenderer.invoke('notes:lire'),
+  note: (id) => ipcRenderer.invoke('notes:note', String(id)),
+  chercher: (q) => ipcRenderer.invoke('notes:chercher', String(q == null ? '' : q).slice(0, 200)),
+  op: (o) => ipcRenderer.invoke('notes:op', o && typeof o === 'object' ? o : null),
+  exporter: (c) => ipcRenderer.invoke('notes:exporter', c && typeof c === 'object' ? { type: String(c.type), id: c.id == null ? null : String(c.id) } : null)
+});
+
 // Courrier (option désactivée par défaut). Les identifiants peuvent être définis ou effacés, jamais relus par la page.
 const typeRecap = (t) => (t === 'devis' ? 'devis' : 'mails');
 contextBridge.exposeInMainWorld('courrier', {
