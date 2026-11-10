@@ -20,7 +20,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verifier
-      - name: Tests (Linux : écran virtuel pour Electron)
+      - name: "Tests (Linux, écran virtuel pour Electron)"
         if: runner.os == 'Linux'
         env:
           ELECTRON_DISABLE_SANDBOX: "1"
