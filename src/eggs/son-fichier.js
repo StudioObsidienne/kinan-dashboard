@@ -1,6 +1,6 @@
 // Lecteur d'un extrait de fichier son local (élément audio, aucun réseau, CSP « media-src 'self' »). Fondus par le volume de l'élément.
 // Échec de chargement ou de lecture : silence, jamais d'erreur. Fenêtre masquée ou son coupé (actif() faux) : la lecture s'arrête.
-// window.SonFichier.jouer({ src, debut, duree, fondu, volume, retard, actif }) -> { couper() }   (secondes ; volume borné par SonsFichiers)
+// window.SonFichier.jouer({ src, debut, duree, fondu, fonduEntree, vitesse, volume, retard, actif }) -> { couper() }   (secondes ; volume borné par SonsFichiers)
 (function () {
   'use strict';
   const S = window.SonsFichiers;
@@ -13,7 +13,7 @@
       if (!o || !o.src || document.hidden || (o.actif && !o.actif())) return nul;
       const a = new Audio();
       let timer = null, att = null, fini = false, debutLecture = 0, coupeDepuis = null, v0 = 0;
-      const volume = S.borneVolume(o.volume), duree = o.duree, fondu = o.fondu;
+      const volume = S.borneVolume(o.volume), duree = o.duree, fondu = o.fondu, fonduEntree = o.fonduEntree;
       const fin = () => {
         if (fini) return; fini = true;
         if (timer) clearInterval(timer); if (att) clearTimeout(att);
@@ -29,12 +29,12 @@
           a.volume = S.borneVolume(v0 * k); return;
         }
         if (t >= duree) return fin();
-        a.volume = S.volumeA(t, duree, fondu, volume);
+        a.volume = S.volumeA(t, duree, fondu, volume, fonduEntree);
       };
       const demarrer = () => {
         if (fini) return;
         try {
-          a.volume = 0; a.currentTime = Math.max(0, o.debut || 0);
+          a.volume = 0; if (o.vitesse > 0) a.playbackRate = o.vitesse; a.currentTime = Math.max(0, o.debut || 0);
           const p = a.play();
           if (p && p.catch) p.catch(fin);
           debutLecture = performance.now();

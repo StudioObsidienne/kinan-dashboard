@@ -205,7 +205,7 @@ function surveillerDemarrage(fenetre, scenarioNotes) {
     const ok = !erreursDemarrage.length;
     process.stdout.write([ok ? 'DEMARRAGE OK' : 'DEMARRAGE ERREUR', ...erreursDemarrage, ''].join('\n'));
     app.exit(ok ? 0 : 1);
-  }, 2500));
+  }, 4000));
 }
 
 // Une seule fenêtre : un second lancement (par le hook de démarrage) se ferme sans rien faire.

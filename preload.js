@@ -61,7 +61,9 @@ contextBridge.exposeInMainWorld('notes', {
   note: (id) => ipcRenderer.invoke('notes:note', String(id)),
   chercher: (q) => ipcRenderer.invoke('notes:chercher', String(q == null ? '' : q).slice(0, 200)),
   op: (o) => ipcRenderer.invoke('notes:op', o && typeof o === 'object' ? o : null),
-  exporter: (c) => ipcRenderer.invoke('notes:exporter', c && typeof c === 'object' ? { type: String(c.type), id: c.id == null ? null : String(c.id) } : null)
+  exporter: (c) => ipcRenderer.invoke('notes:exporter', c && typeof c === 'object' ? { type: String(c.type), id: c.id == null ? null : String(c.id) } : null),
+  importer: (l) => ipcRenderer.invoke('notes:importer', l && typeof l === 'object' ? { projet: l.projet == null ? null : String(l.projet), dossier: l.dossier == null ? null : String(l.dossier) } : null),
+  importerContenus: (l, f) => ipcRenderer.invoke('notes:importerContenus', l && typeof l === 'object' ? { projet: l.projet == null ? null : String(l.projet), dossier: l.dossier == null ? null : String(l.dossier) } : null, Array.isArray(f) ? f.slice(0, 101) : [])
 });
 
 // Courrier (option désactivée par défaut). Les identifiants peuvent être définis ou effacés, jamais relus par la page.

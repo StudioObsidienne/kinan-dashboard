@@ -51,3 +51,17 @@ test('rien de nouveau ou état invalide : pas de pop-up', () => {
   assert.deepStrictEqual(aAnnoncer(null, {}), []);
   assert.deepStrictEqual(aAnnoncer({ appli: { nouvelle: true, distante: null } }, {}), []);
 });
+
+test('statut de version : coche, croix, non confirmée, rien', () => {
+  const { statut } = require('../src/statut-version.js');
+  const base = { active: true, verifie: 1 };
+  assert.strictEqual(statut(base, { locale: '0.5.0', distante: '0.5.0' }).type, 'ok');
+  assert.match(statut(base, { locale: '0.5.0', distante: '0.5.0' }).libelle, /à jour \(v0\.5\.0\)/);
+  const a = statut(base, { locale: '0.5.0', distante: '0.5.1' });
+  assert.strictEqual(a.type, 'ancienne'); assert.match(a.libelle, /mise à jour disponible : v0\.5\.1/);
+  assert.strictEqual(statut(base, { locale: '0.6.0', distante: '0.5.1' }).type, 'non-confirmee');
+  assert.strictEqual(statut(base, { locale: '0.5.0-beta', distante: '0.5.0' }).type, 'ancienne');
+  for (const [etat, e] of [[{ active: false, verifie: 1 }, { locale: '1.0.0', distante: '1.0.0' }], [{ active: true }, { locale: '1.0.0', distante: '1.0.0' }],
+    [{ ...base, enCours: true }, { locale: '1.0.0', distante: '1.0.0' }], [base, { locale: '1.0.0' }], [base, { locale: 'x', distante: '1.0.0' }], [null, null]])
+    assert.strictEqual(statut(etat, e).type, 'aucun');
+});

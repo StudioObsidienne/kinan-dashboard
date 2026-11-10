@@ -109,7 +109,7 @@
     function claquer() {
       const SF = window.SonsFichiers;
       if (!SF || !window.SonFichier) return;
-      window.SonFichier.jouer({ src: SF.FICHIER_FOUET, debut: 0, duree: SF.dureeFouet(), fondu: SF.FONDU_FOUET, volume: SF.VOLUME_FOUET,
+      window.SonFichier.jouer({ src: SF.FICHIER_FOUET, debut: 0, duree: SF.dureeFouet(), fondu: SF.FONDU_FOUET, fonduEntree: SF.FONDU_ENTREE_FOUET, vitesse: SF.VITESSE_FOUET, volume: SF.VOLUME_FOUET,
         retard: SF.retardFouet(api.calme() ? 0 : L.IMPACT), actif: () => !api.muet() && !doc.hidden });
     }
 

@@ -125,20 +125,28 @@
   <section id="notes" hidden aria-label="Bloc-notes">
     <p id="n-avis" class="avertissement" role="alert" hidden></p>
     <div class="n-grille">
-      <div class="n-arbre" role="navigation" aria-label="Rangement des notes">
-        <ul id="n-arbre" class="n-liste-arbre"></ul>
-        <form id="n-form-projet" class="n-ajout"><input id="n-nom-projet" type="text" maxlength="80" placeholder="Nouveau projet" aria-label="Nom du nouveau projet" autocomplete="off"><button type="submit">Ajouter</button></form>
-      </div>
-      <div class="n-colonne">
-        <div class="barre"><button id="n-nouvelle" class="primaire" title="Ctrl+N dans cet onglet" aria-keyshortcuts="Control+N">Nouvelle note</button><input id="n-recherche" type="search" placeholder="Rechercher dans toutes les notes…" autocomplete="off" aria-label="Rechercher dans toutes les notes"></div>
-        <div id="n-actions-lieu" class="barre"></div>
+      <div class="n-colonne" id="n-colonne">
+        <button id="n-nouvelle" class="primaire n-grand" title="Ctrl+N dans cet onglet" aria-keyshortcuts="Control+N">+ Nouvelle note</button>
+        <input id="n-recherche" type="search" placeholder="Rechercher dans toutes les notes…" autocomplete="off" aria-label="Rechercher dans toutes les notes">
+        <div class="n-rangement">
+          <label class="n-dossier muet">Dossier<select id="n-dossier"></select></label>
+          <details id="n-organiser" class="n-organiser">
+            <summary>Organiser</summary>
+            <div class="n-organiser-corps">
+              <form id="n-form-projet" class="n-ajout"><input id="n-nom-projet" type="text" maxlength="80" placeholder="Nouveau projet" aria-label="Nom du nouveau projet" autocomplete="off"><button type="submit">Ajouter</button></form>
+              <p id="n-aide-lieu" class="muet petit"></p>
+              <div id="n-actions-lieu" class="barre"></div>
+            </div>
+          </details>
+        </div>
         <h2 id="n-titre-lieu" class="sous-titre"></h2>
         <ul id="n-liste" class="n-liste" aria-labelledby="n-titre-lieu"></ul>
         <p id="n-vide" class="muet" hidden></p>
+        <div class="n-import"><button id="n-importer" type="button">Importer des fichiers texte…</button><span class="muet petit">.txt ou .md, ou glissez-les ici</span></div>
       </div>
-      <div class="n-editeur" id="n-editeur" hidden>
-        <label for="n-texte" class="muet">Note (la première ligne sert de titre)</label>
-        <textarea id="n-texte" maxlength="100000" spellcheck="true"></textarea>
+      <div class="n-editeur" id="n-editeur">
+        <label for="n-texte" class="muet">Note : la première ligne sert de titre, tout s'enregistre tout seul</label>
+        <textarea id="n-texte" maxlength="100000" spellcheck="true" placeholder="Écrivez ici…"></textarea>
         <div class="barre">
           <button id="n-epingler" aria-pressed="false">Épingler</button>
           <label class="n-deplacer muet">Déplacer vers…<select id="n-deplacer"></select></label>

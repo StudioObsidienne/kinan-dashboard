@@ -2,6 +2,13 @@
 
 Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il sera fixé à la publication.
 
+## [0.5.1] — 2026-11-10
+- **Fouet** plus fort et plus sec (volume, attaque nette, coupe plus tôt).
+- **Test de démarrage** de l'onglet Notes stabilisé (délai de sortie 4 s).
+- **Notes plus simples, comme un vrai bloc-notes** : liste des notes à gauche (titre, début, date ; la plus récente en haut), grande zone de texte à droite prête à écrire (la première frappe crée la note), « + Nouvelle note » (Ctrl+N), enregistrement automatique. Le rangement reste optionnel : sélecteur « Dossier » (Toutes les notes par défaut, « Boîte de réception » devient « Sans dossier ») et menu « Organiser » replié pour les projets et dossiers.
+- **Import de fichiers texte** (.txt, .md) : bouton « Importer des fichiers texte… » ou glisser-déposer ; une note par fichier (titre = nom du fichier), UTF-8 (avec BOM) sinon Windows-1252, 1 Mo et 100 000 caractères au plus, 100 fichiers par lot ; résumé « N importées, M ignorées (raison) ». Les fichiers ne sont jamais modifiés ni supprimés.
+- **Coche verte / croix rouge** à côté des versions du plugin et du dashboard (en-tête et panneau des mises à jour) : ✓ à jour, ✗ mise à jour disponible ou version non confirmée ; rien si la vérification est désactivée, jamais faite ou en cours.
+
 ## [0.5.0] — 2026-11-10
 - **Bloc-notes** (onglet Notes de Gestion) : idées et pense-bêtes rangés par projet et par dossier, Boîte de réception par défaut, Ctrl+N, enregistrement automatique, épinglage, déplacement, recherche plein texte, corbeille 30 jours avec « Annuler », export `.md`. 100 % local : `notes.json` (écriture atomique, sauvegarde `notes.json.bak`, fichier abîmé conservé à part). Spec : `docs/SPEC-NOTES.md`.
 

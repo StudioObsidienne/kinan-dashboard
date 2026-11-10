@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const config = require('./config');
 const logique = require('./notes-logique');
 const stockage = require('./notes-stockage');
+const importation = require('./notes-import');
 
 const F_NOTES = path.join(config.DOSSIER, 'notes.json');
 let etat = null;
@@ -36,6 +37,25 @@ function enregistrer() {
     try { stockage.ecrire(F_NOTES, r.etat); } catch (err) { return { ok: false, erreur: 'Enregistrement impossible : ' + String(err.message).slice(0, 120) }; }
     etat = r.etat;
     return { ok: true, id: r.id || null };
+  });
+  // Import de fichiers texte (.txt, .md) : une note par fichier, dans le lieu demandé. Tout est validé ici ; les fichiers ne sont que lus.
+  const lieuValide = (l) => (l && typeof l === 'object' ? { projet: typeof l.projet === 'string' ? l.projet : null, dossier: typeof l.dossier === 'string' ? l.dossier : null } : {});
+  function terminerImport(entrees, lieu) {
+    const r = importation.importer(charger(), entrees, lieuValide(lieu), { now: Date.now(), genId });
+    if (r.importees) {
+      try { stockage.ecrire(F_NOTES, r.etat); } catch (err) { return { ok: false, erreur: 'Enregistrement impossible : ' + String(err.message).slice(0, 120) }; }
+      etat = r.etat;
+    }
+    return { ok: true, importees: r.importees, ignorees: r.ignorees.length, message: r.message, ids: r.ids };
+  }
+  ipcMain.handle('notes:importer', async (e, lieu) => {
+    const r = await dialog.showOpenDialog(BrowserWindow.fromWebContents(e.sender), { title: 'Importer des fichiers texte', defaultPath: app.getPath('documents'), properties: ['openFile', 'multiSelections'], filters: [{ name: 'Fichiers texte (.txt, .md)', extensions: ['txt', 'md'] }] });
+    if (r.canceled || !Array.isArray(r.filePaths) || !r.filePaths.length) return { ok: false, annule: true };
+    return terminerImport(importation.lireFichiers(r.filePaths), lieu);
+  });
+  ipcMain.handle('notes:importerContenus', (_e, lieu, fichiers) => {
+    if (!Array.isArray(fichiers) || !fichiers.length) return { ok: false, erreur: 'Aucun fichier reçu.' };
+    return terminerImport(fichiers.slice(0, importation.IMPORT.fichiers + 1).map(importation.entreeRendu), lieu);
   });
   // Export Markdown : dossier choisi par une boîte de dialogue du système ; un fichier existant n'est jamais écrasé (suffixe -2, -3…).
   ipcMain.handle('notes:exporter', async (e, cible) => {

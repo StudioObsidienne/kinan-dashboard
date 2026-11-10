@@ -168,6 +168,11 @@
   .version { display: inline-flex; align-items: center; gap: 3px; padding: 0; font-size: 11px; color: var(--pale); background: none; border: 0; cursor: pointer; }
   .version:hover, .version:focus-visible { color: var(--doux); }
   .version[hidden], .pastille-maj[hidden], .bulle-limite[hidden] { display: none; }
+  .v-marque { font-weight: 700; font-size: 11px; line-height: 1; margin-left: 2px; --v-ok: #5fd3a0; --v-ko: #ff8a94; }
+  .v-marque[hidden] { display: none; }
+  .v-marque.v-ok { color: var(--v-ok); }
+  .v-marque.v-ancienne, .v-marque.v-non-confirmee { color: var(--v-ko); }
+  @media (prefers-color-scheme: light) { .v-marque { --v-ok: #0b7a4b; --v-ko: #b3202e; } }
   .version .v-coche { display: none; width: 11px; height: 11px; fill: none; stroke: #5fd3a0; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
   .version.a-jour .v-coche { display: inline; }
   .pastille-maj { font: inherit; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; cursor: pointer; color: #ffd166; background: #2b1d06; border: 1px solid #ffb020aa; }
@@ -300,7 +305,7 @@
       <div>
         <div class="titre-ligne">
           <h1>Kinan Orchestre</h1>
-          <button type="button" id="version" class="version mono" hidden><span class="v-lignes"><span class="v-ligne"><span id="version-txt"></span> Dashboard<svg class="v-coche" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg></span><span class="v-ligne" id="version-plugin" hidden></span></span></button>
+          <button type="button" id="version" class="version mono" hidden><span class="v-lignes"><span class="v-ligne"><span id="version-txt"></span> Dashboard<span id="version-marque" class="v-marque" hidden></span></span><span class="v-ligne" id="version-plugin" hidden></span></span></button>
           <button type="button" id="pastille-maj" class="pastille-maj" hidden>mise à jour disponible</button>
         </div>
         <p id="sous-titre">Bureau des agents</p>
@@ -401,6 +406,7 @@
   <script src="economies-carte.js"></script>
   <script src="limite-logique.js"></script>
   <script src="bulle-limite.js"></script>
+  <script src="statut-version.js"></script>
   <script src="maj-limites.js"></script>
 </body>
 </html>

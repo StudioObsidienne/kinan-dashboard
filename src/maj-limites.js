@@ -13,6 +13,15 @@
   const code = (t) => el('code', t);
   const dateCourte = (ms) => new Date(ms).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+  // Marque ✓ (vert) ou ✗ (rouge) selon StatutVersion ; rien si vérification désactivée, jamais faite ou en cours.
+  function marque(e) {
+    const s = window.StatutVersion ? window.StatutVersion.statut(etat, e) : { type: 'aucun' };
+    const n = el('span', s.symbole, 'v-marque'); n.hidden = s.type === 'aucun';
+    if (s.type !== 'aucun') { n.classList.add('v-' + s.type); n.title = s.libelle; n.setAttribute('role', 'img'); n.setAttribute('aria-label', s.libelle); }
+    return n;
+  }
+  const ligneMarque = (txt, e) => { const p = el('p', txt); const m = marque(e); if (!m.hidden) { p.append(' '); p.append(m); } return p; };
+
   function rendre() {
     if (!etat || !ver) return;
     const nouv = ['appli', 'plugin'].filter((k) => etat[k] && etat[k].nouvelle);
@@ -20,7 +29,8 @@
     const aJour = etat.active && !!etat.verifie && !nouv.length && !(Array.isArray(etat.cachePerime) && etat.cachePerime.length);
     verTxt.textContent = 'v' + etat.appli.locale;
     verPlugin.hidden = !(etat.plugin && etat.plugin.locale);
-    if (!verPlugin.hidden) verPlugin.textContent = 'v' + etat.plugin.locale + ' Plugin';
+    if (!verPlugin.hidden) { verPlugin.textContent = 'v' + etat.plugin.locale + ' Plugin'; verPlugin.append(marque(etat.plugin)); }
+    const mA = $('version-marque'); if (mA) mA.replaceWith(Object.assign(marque(etat.appli), { id: 'version-marque' }));
     ver.classList.toggle('a-jour', aJour);
     ver.title = !etat.active ? 'Version du tableau de bord · vérification désactivée (kinan.config.json : miseAJour.verifier)'
       : !etat.verifie ? 'Version installée. Pas encore vérifiée (hors ligne ?).'
@@ -59,8 +69,8 @@
   function remplir() {
     corps.replaceChildren();
     const a = etat.appli, p = etat.plugin;
-    corps.append(el('p', 'Tableau de bord (cette appli) : v' + a.locale + (a.distante ? ' installée, v' + a.distante + ' publiée.' : ' installée.')));
-    if (p && p.locale) corps.append(el('p', 'Plugin Claude Code (kinan-orchestre) : v' + p.locale + (p.distante ? ' installé, v' + p.distante + ' publié.' : ' installé.')));
+    corps.append(ligneMarque('Tableau de bord (cette appli) : v' + a.locale + (a.distante ? ' installée, v' + a.distante + ' publiée.' : ' installée.'), a));
+    if (p && p.locale) corps.append(ligneMarque('Plugin Claude Code (kinan-orchestre) : v' + p.locale + (p.distante ? ' installé, v' + p.distante + ' publié.' : ' installé.'), p));
     if (p && p.locale) corps.append(el('p', 'Ce sont deux éléments distincts, avec chacun son numéro de version.'));
     if (!etat.active) corps.append(el('p', 'La vérification des mises à jour est désactivée (aucune connexion). Voir le README pour l\'activer.'));
     else if (!etat.verifie) corps.append(el('p', 'Pas encore vérifié : pas de réseau ou GitHub injoignable. Nouvel essai plus tard.'));

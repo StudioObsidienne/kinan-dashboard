@@ -58,7 +58,13 @@ function purger(etat, now) {
 }
 
 const vivant = (x) => !x.supprime;
-const resume = (n) => ({ id: n.id, projet: n.projet, dossier: n.dossier, titre: n.titre, extrait: n.texte.replace(/\s+/g, ' ').trim().slice(0, 140), cree: n.cree, modif: n.modif, epinglee: n.epinglee });
+// Début affiché dans la liste : le texte qui suit la ligne du titre, espaces réduits.
+function debutDe(texte) {
+  const l = String(texte || '').split(/\r?\n/);
+  const i = l.findIndex((x) => x.replace(/^\s*#+\s*/, '').trim());
+  return l.slice(i + 1).join(' ').replace(/\s+/g, ' ').trim().slice(0, 140);
+}
+const resume = (n) => ({ id: n.id, projet: n.projet, dossier: n.dossier, titre: n.titre, debut: debutDe(n.texte), extrait: n.texte.replace(/\s+/g, ' ').trim().slice(0, 140), cree: n.cree, modif: n.modif, epinglee: n.epinglee });
 const ordre = (a, b) => (b.epinglee - a.epinglee) || (b.modif < a.modif ? -1 : b.modif > a.modif ? 1 : 0);
 
 // Vue envoyée au rendu : éléments vivants (sans le texte complet des notes) et contenu de la corbeille.
@@ -215,7 +221,7 @@ function versMarkdown(etat, cible) {
   const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'notes';
   if (!cible || cible.type === 'boite') {
     const l = notesDe((n) => !n.projet);
-    return { nomFichier: 'notes-boite-de-reception.md', contenu: `# Boîte de réception\n\n${l.map((n) => bloc(n, 2)).join('\n')}`, nb: l.length };
+    return { nomFichier: 'notes-sans-dossier.md', contenu: `# Sans dossier\n\n${l.map((n) => bloc(n, 2)).join('\n')}`, nb: l.length };
   }
   if (cible.type === 'dossier') {
     const d = trouver(etat.dossiers, cible.id); if (!d) return null;
@@ -237,4 +243,4 @@ function versMarkdown(etat, cible) {
   return null;
 }
 
-module.exports = { LIMITES, CORBEILLE_MS, vide, normaliser, purger, vue, rechercher, appliquer, versMarkdown, titreDe };
+module.exports = { LIMITES, CORBEILLE_MS, vide, normaliser, purger, vue, rechercher, appliquer, versMarkdown, titreDe, debutDe };

@@ -9,7 +9,7 @@ const RACINE = path.join(__dirname, '..');
 
 test('volumes : discrets et bornés', () => {
   assert.ok(S.VOLUME_RONFLEMENT > 0 && S.VOLUME_RONFLEMENT <= 0.3);
-  assert.ok(S.VOLUME_FOUET > 0 && S.VOLUME_FOUET <= 0.35);
+  assert.ok(S.VOLUME_FOUET > 0 && S.VOLUME_FOUET <= 0.6 && S.VOLUME_FOUET <= S.VOLUME_MAX);
   assert.strictEqual(S.borneVolume(5), S.VOLUME_MAX);
   assert.strictEqual(S.borneVolume(-1), 0);
   assert.strictEqual(S.borneVolume(NaN), 0);
@@ -48,12 +48,18 @@ test('volumeA : jamais au-dessus du plafond', () => {
   assert.strictEqual(S.volumeA(3, 6, 0.4, S.VOLUME_RONFLEMENT), S.VOLUME_RONFLEMENT);
 });
 
+test('fouet : attaque sèche, fondu d entrée quasi nul', () => {
+  assert.ok(S.FONDU_ENTREE_FOUET <= 0.02 && S.FONDU_FOUET <= 0.3 && S.COUPE_FOUET <= 1.2);
+  assert.ok(S.VITESSE_FOUET >= 1 && S.VITESSE_FOUET <= 1.15 && S.VOLUME_MAX <= 0.8);
+  assert.strictEqual(S.gainFondu(0.02, 1, 0.25, S.FONDU_ENTREE_FOUET), 1);
+  assert.ok(Math.abs(S.gainFondu(0.9, 1, 0.25, 0.01) - 0.4) < 1e-9);
+});
 test('fouet : coupé à COUPE_FOUET, calé sur l\'impact', () => {
   assert.strictEqual(S.dureeFouet(), Math.min(S.COUPE_FOUET, S.DUREE_FOUET));
   assert.strictEqual(S.dureeFouet(3), S.COUPE_FOUET);
   assert.strictEqual(S.dureeFouet(0.8), 0.8);
   assert.strictEqual(S.dureeFouet(-2), Math.min(S.COUPE_FOUET, S.DUREE_FOUET));
-  assert.ok(Math.abs(S.retardFouet(120) - (0.12 - S.ATTAQUE_FOUET)) < 1e-9);
+  assert.ok(Math.abs(S.retardFouet(120) - (0.12 - S.ATTAQUE_FOUET / S.VITESSE_FOUET)) < 1e-9);
   assert.strictEqual(S.retardFouet(0), 0, 'mouvement réduit : immédiat');
   assert.strictEqual(S.retardFouet(NaN), 0);
 });
