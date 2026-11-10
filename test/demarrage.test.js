@@ -12,11 +12,21 @@ const path = require('path');
 let electron = null;
 try { electron = require('electron'); } catch { /* npm install non fait */ }
 
-function demarrer(dossier, extra) {
-  return new Promise((ok) => {
+// Windows (CI) : le binaire Electron peut être brièvement verrouillé (EBUSY) par l'antivirus ou un autre test ; on réessaie.
+async function demarrer(dossier, extra) {
+  for (let essai = 1; ; essai++) {
+    try { return await demarrerUneFois(dossier, extra); }
+    catch (e) { if (essai >= 6 || !/EBUSY|EPERM|EACCES/.test(String(e && e.code))) throw e; await new Promise((r) => setTimeout(r, 1500)); }
+  }
+}
+
+function demarrerUneFois(dossier, extra) {
+  return new Promise((ok, ko) => {
     const env = { ...process.env, KINAN_TEST_DEMARRAGE: '1', KINAN_OS_DOSSIER: dossier, ...(extra || {}) };
     delete env.ELECTRON_RUN_AS_NODE;
-    const p = spawn(electron, ['.'], { cwd: path.join(__dirname, '..'), env });
+    let p;
+    try { p = spawn(electron, ['.'], { cwd: path.join(__dirname, '..'), env }); } catch (e) { return ko(e); }
+    p.on('error', ko);
     let sortie = '';
     p.stdout.on('data', (x) => (sortie += x));
     p.stderr.on('data', (x) => (sortie += x));
