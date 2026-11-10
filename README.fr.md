@@ -4,6 +4,10 @@
 
 [English](README.md) · [Site web](https://kinan-orchestre-site.vercel.app/)
 
+Vidéo de démonstration (29 s, avec son) :
+
+https://github.com/user-attachments/assets/07fee2cf-7dc0-4a8d-91d2-3719df02a658
+
 Tableau de bord Electron hors ligne pour le plugin Claude Code **kinan-orchestre**. Dans un petit bureau en pixel art, il montre ce que font le juge (Kinan) et les agents configurés, quelles conversations Claude Code sont actives, quand arrive le prochain relais, et quelques statistiques locales. Par défaut, il lit uniquement des fichiers locaux, n'ouvre aucune connexion réseau et n'appelle aucun modèle : il ne consomme aucun jeton. Deux options changent cela, seulement une fois activées : la vérification des mises à jour et l'onglet Courrier (votre propre boîte en IMAP/SMTP, récaps et devis préparés par Claude Code). Voir « Réseau ».
 
 Le plugin écrit les fichiers d'état ; ce tableau de bord se contente de les afficher. Sans les hooks du plugin, il reste au repos.

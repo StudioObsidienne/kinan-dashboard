@@ -4,6 +4,10 @@
 
 [Français](README.fr.md) · [Website](https://kinan-orchestre-site.vercel.app/)
 
+Demo video (29 s, sound):
+
+https://github.com/user-attachments/assets/07fee2cf-7dc0-4a8d-91d2-3719df02a658
+
 An offline Electron dashboard for the **kinan-orchestre** Claude Code plugin. It shows, in a small pixel-art office, what the judge (Kinan) and the configured agents are doing, which Claude Code conversations are active, when the next relay is due, and a few local statistics. By default it reads local files only, makes no network connection and calls no model, so it consumes no tokens. Two options change that, only once you enable them: the update check, and the Mail tab (your own mailbox over IMAP/SMTP, summaries and quotes prepared by Claude Code). See "Network".
 
 The plugin writes the state files; this dashboard only displays them. Without the plugin's hooks, the dashboard stays in its idle state.
