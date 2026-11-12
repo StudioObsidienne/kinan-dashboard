@@ -2,6 +2,10 @@
 
 Format : Keep a Changelog. Le numéro de version n'est pas modifié ici : il sera fixé à la publication.
 
+## [À venir]
+- **Tests de démarrage invisibles** : en mode test, aucune fenêtre ne s'affiche ni ne prend le focus (transparentes, non focalisables, hors barre des tâches).
+- **Raccourcis** : arguments périmés vidés ; une épingle de la barre des tâches existante est mise à jour (icône et cible) après un déplacement du dossier.
+
 ## [0.5.1] — 2026-11-10
 - **Fouet** plus fort et plus sec (volume, attaque nette, coupe plus tôt).
 - **Test de démarrage** de l'onglet Notes stabilisé (délai de sortie 4 s).

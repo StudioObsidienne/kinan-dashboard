@@ -187,6 +187,9 @@ const TEST_DEMARRAGE = process.env.KINAN_TEST_DEMARRAGE === '1';
 const erreursDemarrage = [];
 if (TEST_DEMARRAGE) {
   app.setPath('userData', path.join(DOSSIER_ETAT, 'profil-electron-test'));
+  // Test : aucune fenêtre ne doit apparaître, passer au premier plan ni voler le focus (ex. pendant que l'utilisateur joue) :
+  // transparente, non focalisable, absente de la barre des tâches. Le chargement de la page et les scénarios se déroulent normalement.
+  app.on('browser-window-created', (_e, w) => { try { w.setFocusable(false); w.setOpacity(0); w.setSkipTaskbar(true); } catch { /* ignoré */ } });
   process.on('uncaughtException', (e) => erreursDemarrage.push('processus principal : ' + String((e && e.stack) || e).slice(0, 400)));
   setTimeout(() => { process.stdout.write(['DEMARRAGE ERREUR', 'délai dépassé (45 s)', ...erreursDemarrage, ''].join('\n')); app.exit(2); }, 45000).unref();
 }
