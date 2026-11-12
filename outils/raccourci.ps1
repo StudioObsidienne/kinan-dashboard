@@ -36,12 +36,17 @@ public static class KinanAumid {
 }
 '@
   $racine = Split-Path -Parent $PSScriptRoot
-  $dossiers = @([Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('Programs')) ''))
+  # Bureau et menu Demarrer : crees ou remis a jour. Barre des taches : seulement MIS A JOUR s'il est deja epingle
+  # (dossier deplace : la cible et l'icone de l'ancien emplacement sont corrigees ; on n'epingle jamais a la place de l'utilisateur).
+  $epingles = Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
+  $dossiers = @([Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('Programs')) ''), $epingles)
   foreach ($d in $dossiers) {
     try {
       $lnk = Join-Path $d 'Kinan Orchestre.lnk'
+      if (($d -eq $epingles) -and -not (Test-Path -LiteralPath $lnk)) { continue }
       $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
       $s.TargetPath = Join-Path $racine 'lancer-kinan-os.cmd'
+      $s.Arguments = ''
       $s.WorkingDirectory = $racine
       $s.IconLocation = (Join-Path $racine 'assets\icon.ico') + ',0'
       $s.WindowStyle = 7
