@@ -16,7 +16,7 @@ try { electron = require('electron'); } catch { /* npm install non fait */ }
 async function demarrer(dossier, extra) {
   for (let essai = 1; ; essai++) {
     try { return await demarrerUneFois(dossier, extra); }
-    catch (e) { if (essai >= 6 || !/EBUSY|EPERM|EACCES/.test(String(e && e.code))) throw e; await new Promise((r) => setTimeout(r, 1500)); }
+    catch (e) { if (essai >= 6 || !/EBUSY|ETXTBSY|EPERM|EACCES/.test(String(e && e.code))) throw e; await new Promise((r) => setTimeout(r, 1500)); }
   }
 }
 
